@@ -163,7 +163,7 @@ export default function Home() {
         setPage(3);
         // 保存到历史记录
         const history = JSON.parse(localStorage.getItem('meal_history') || '[]');
-        history.unshift({ style: [...style], days: parseInt(days), date: new Date().toLocaleDateString() });
+        history.unshift({ style: [...style], days: days, date: new Date().toLocaleDateString() });
         localStorage.setItem('meal_history', JSON.stringify(history.slice(0, 10)));
       }
     } catch (e) { setError('生成失败，请重试'); }
