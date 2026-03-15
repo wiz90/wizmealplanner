@@ -1,0 +1,375 @@
+'use client';
+
+import { useState } from 'react';
+import { UserProfile, SessionPlan, MealPlan } from '@/types';
+
+// ============ 常量 ============
+
+const GOAL_OPTIONS = ['健康', '减脂', '增肌', '快手', '便当', '替代外卖', '清淡恢复'];
+
+const HARD_RESTRICTION_OPTIONS = [
+  '海鲜过敏', '奶制品过敏', '坚果过敏', '麸质过敏',
+  '不吃牛肉', '不吃猪肉', '不吃鸡肉', '不吃酒精', '不吃生冷'
+];
+
+const KITCHEN_TOOL_OPTIONS = [
+  '炒锅', '平底锅', '电饭锅', '空气炸锅', '微波炉', '烤箱', '电压力锅', '汤锅', '蒸锅'
+];
+
+const STYLE_OPTIONS = [
+  '家常中餐', '地中海', '轻食', '日式简餐', '韩式', '东南亚', '高蛋白风格'
+];
+
+const DISLIKE_OPTIONS = [
+  '香菜', '内脏', '胡萝卜', '茄子', '青椒', '苦瓜', '香菇', '腐竹'
+];
+
+const MEAL_OPTIONS = ['早餐', '上午加餐', '午餐', '下午加餐', '晚餐', '宵夜'];
+
+const MEAL_EMOJI: Record<string, string> = {
+  '早餐': '🌅', '上午加餐': '🍎', '午餐': '☀️',
+  '下午加餐': '🫐', '晚餐': '🌙', '宵夜': '🌙',
+};
+
+// ============ 组件 ============
+
+function RecipeCard({ recipe }: { recipe: MealPlan['days'][0]['meals'][0]['dishes'][0]['recipe'] }) {
+  return (
+    <div className="bg-amber-50 rounded-lg p-3 mt-2">
+      <div className="flex flex-wrap gap-1 mb-2">
+        {recipe.tags.map((tag, i) => (
+          <span key={i} className="px-2 py-0.5 bg-green-100 text-green-700 text-xs rounded">{tag}</span>
+        ))}
+        <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs rounded">⏱️{recipe.time_cost}分钟</span>
+      </div>
+      <div className="mb-2">
+        <span className="text-xs text-gray-500">食材: </span>
+        <span className="text-sm text-gray-700">{recipe.ingredients.join('、')}</span>
+      </div>
+      <div>
+        <span className="text-xs text-gray-500">做法: </span>
+        <ol className="text-sm text-gray-700 mt-1 space-y-0.5">
+          {recipe.steps.map((step, i) => (
+            <li key={i}>{i + 1}. {step}</li>
+          ))}
+        </ol>
+      </div>
+    </div>
+  );
+}
+
+export default function Home() {
+  const [step, setStep] = useState(1);
+  
+  const [profile, setProfile] = useState<UserProfile>({
+    goals: [],
+    hard_restrictions: [],
+    kitchen_tools: [],
+    custom_restrictions: [],
+  });
+
+  const [session, setSession] = useState<SessionPlan>({
+    style_preferences: [],
+    soft_dislikes: [],
+    custom_dislikes: [],
+    days: 3,
+    meals_per_day: ['早餐', '午餐', '晚餐'],
+    person_count: 2,
+    budget: '无限制',
+  });
+
+  const [customRestriction, setCustomRestriction] = useState('');
+  const [customDislike, setCustomDislike] = useState('');
+
+  const [loading, setLoading] = useState(false);
+  const [result, setResult] = useState<MealPlan | null>(null);
+  const [error, setError] = useState('');
+  const [selectedDay, setSelectedDay] = useState(1);
+
+  const handleSubmit = async () => {
+    if (profile.goals.length === 0 || session.style_preferences.length === 0) {
+      setError('请至少选择一个目标和风格');
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+
+    try {
+      const res = await fetch('/api/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ profile, session }),
+      });
+      const data = await res.json();
+      if (data.error) {
+        setError(data.error);
+      } else {
+        setResult(data);
+        setSelectedDay(1);
+      }
+    } catch (err) {
+      setError('生成失败，请重试');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const toggle = (arr: string[], item: string, setter: (v: string[]) => void) => {
+    setter(arr.includes(item) ? arr.filter(i => i !== item) : [...arr, item]);
+  };
+
+  const addCustom = (value: string, list: string[], setList: (v: string[]) => void, inputSetter: (v: string) => void) => {
+    if (value.trim()) {
+      setList([...list, value.trim()]);
+      inputSetter('');
+    }
+  };
+
+  const canProceed = () => {
+    if (step === 1) return profile.goals.length > 0;
+    if (step === 2) return session.style_preferences.length > 0;
+    return true;
+  };
+
+  // ============ 结果展示 ============
+  if (result) {
+    return (
+      <div className="min-h-screen bg-gray-50 py-8">
+        <div className="max-w-4xl mx-auto px-4">
+          <div className="bg-white rounded-xl shadow p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold">📋 饮食计划</h2>
+              <button onClick={() => { setResult(null); setStep(1); }} className="text-blue-500">
+                重新规划 →
+              </button>
+            </div>
+
+            <div className="bg-blue-50 rounded-lg p-3 mb-4 text-sm">
+              {(result.session_plan?.days || result.session_plan?.days) || '?'}天 · {result.session_plan?.person_count || 2}人 · {result.session_plan?.meals_per_day?.length || 3}餐/天
+            </div>
+
+            <div className="flex gap-2 mb-4 overflow-x-auto">
+              {result.days.map(day => (
+                <button key={day.day_index} onClick={() => setSelectedDay(day.day_index)}
+                  className={`px-4 py-2 rounded-full text-sm ${selectedDay === day.day_index ? 'bg-green-500 text-white' : 'bg-gray-100'}`}>
+                  第{day.day_index}天
+                </button>
+              ))}
+            </div>
+
+            {result.days.filter(d => d.day_index === selectedDay).map(day => (
+              <div key={day.day_index} className="space-y-4">
+                {day.meals.map((meal, idx) => (
+                  <div key={idx} className="border rounded-xl p-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-xl">{MEAL_EMOJI[meal.type] || '🍽️'}</span>
+                      <span className="font-semibold">{meal.type}</span>
+                      <span className="text-sm text-gray-400">({meal.dishes.length}道菜)</span>
+                    </div>
+                    {meal.dishes.map((dish, didx) => (
+                      <div key={didx} className="mb-3">
+                        <div className="font-medium">{dish.recipe.recipe_name}</div>
+                        <RecipeCard recipe={dish.recipe} />
+                      </div>
+                    ))}
+                  </div>
+                ))}
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ============ 填写流程 ============
+  return (
+    <div className="min-h-screen bg-gray-50 py-8">
+      <div className="max-w-3xl mx-auto px-4">
+        <h1 className="text-2xl font-bold text-center mb-6">🍽️ 饮食规划</h1>
+
+        {/* 步骤条 */}
+        <div className="flex justify-center gap-2 mb-6">
+          {[1, 2, 3].map(s => (
+            <div key={s} className="flex items-center">
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center ${s === step ? 'bg-blue-500 text-white' : s < step ? 'bg-green-500 text-white' : 'bg-gray-200'}`}>
+                {s < step ? '✓' : s}
+              </div>
+              {s < 3 && <div className={`w-8 h-0.5 ${s < step ? 'bg-green-400' : 'bg-gray-200'}`} />}
+            </div>
+          ))}
+        </div>
+
+        <div className="bg-white rounded-xl shadow p-6">
+          {error && <div className="bg-red-50 text-red-600 p-3 rounded-lg mb-4">{error}</div>}
+
+          {/* Step 1: 档案 */}
+          {step === 1 && (
+            <div className="space-y-5">
+              <div>
+                <h3 className="font-semibold mb-2">🎯 目标</h3>
+                <div className="flex flex-wrap gap-2">
+                  {GOAL_OPTIONS.map(opt => (
+                    <button key={opt} onClick={() => toggle(profile.goals, opt, v => setProfile({ ...profile, goals: v }))}
+                      className={`px-4 py-2 rounded-full ${profile.goals.includes(opt) ? 'bg-blue-500 text-white' : 'bg-gray-100'}`}>
+                      {opt}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <h3 className="font-semibold mb-2">🚫 忌口</h3>
+                <div className="flex flex-wrap gap-2 mb-2">
+                  {HARD_RESTRICTION_OPTIONS.map(opt => (
+                    <button key={opt} onClick={() => toggle(profile.hard_restrictions, opt, v => setProfile({ ...profile, hard_restrictions: v }))}
+                      className={`px-3 py-1 rounded-full text-sm ${profile.hard_restrictions.includes(opt) ? 'bg-red-500 text-white' : 'bg-gray-100'}`}>
+                      {opt}
+                    </button>
+                  ))}
+                </div>
+                <div className="flex gap-2">
+                  <input value={customRestriction} onChange={e => setCustomRestriction(e.target.value)}
+                    placeholder="自定义忌口..." className="flex-1 px-3 py-2 border rounded-lg text-sm"
+                    onKeyDown={e => e.key === 'Enter' && addCustom(customRestriction, profile.custom_restrictions || [], v => setProfile({ ...profile, custom_restrictions: v }), setCustomRestriction)} />
+                  <button onClick={() => addCustom(customRestriction, profile.custom_restrictions || [], v => setProfile({ ...profile, custom_restrictions: v }), setCustomRestriction)}
+                    className="px-4 py-2 bg-gray-200 rounded-lg text-sm">添加</button>
+                </div>
+                {profile.custom_restrictions?.map((item, i) => (
+                  <span key={i} className="inline-flex items-center px-2 py-1 bg-red-100 text-red-600 text-xs rounded-full mr-1">
+                    {item} <button onClick={() => setProfile({ ...profile, custom_restrictions: profile.custom_restrictions?.filter((_, idx) => idx !== i) })} className="ml-1">×</button>
+                  </span>
+                ))}
+              </div>
+
+              <div>
+                <h3 className="font-semibold mb-2">🍳 厨具</h3>
+                <div className="flex flex-wrap gap-2">
+                  {KITCHEN_TOOL_OPTIONS.map(opt => (
+                    <button key={opt} onClick={() => toggle(profile.kitchen_tools, opt, v => setProfile({ ...profile, kitchen_tools: v }))}
+                      className={`px-3 py-1 rounded-full text-sm ${profile.kitchen_tools.includes(opt) ? 'bg-green-500 text-white' : 'bg-gray-100'}`}>
+                      {opt}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Step 2: 计划 */}
+          {step === 2 && (
+            <div className="space-y-5">
+              <div>
+                <h3 className="font-semibold mb-2">🍜 风格</h3>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                  {STYLE_OPTIONS.map(opt => (
+                    <button key={opt} onClick={() => toggle(session.style_preferences, opt, v => setSession({ ...session, style_preferences: v }))}
+                      className={`p-3 rounded-lg text-center ${session.style_preferences.includes(opt) ? 'bg-purple-500 text-white' : 'bg-gray-100'}`}>
+                      {opt}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <h3 className="font-semibold mb-2">🤔 不爱吃</h3>
+                <div className="flex flex-wrap gap-2 mb-2">
+                  {DISLIKE_OPTIONS.map(opt => (
+                    <button key={opt} onClick={() => toggle(session.soft_dislikes, opt, v => setSession({ ...session, soft_dislikes: v }))}
+                      className={`px-3 py-1 rounded-full text-sm ${session.soft_dislikes.includes(opt) ? 'bg-yellow-500 text-white' : 'bg-gray-100'}`}>
+                      {opt}
+                    </button>
+                  ))}
+                </div>
+                <div className="flex gap-2">
+                  <input value={customDislike} onChange={e => setCustomDislike(e.target.value)}
+                    placeholder="其他不爱吃..." className="flex-1 px-3 py-2 border rounded-lg text-sm"
+                    onKeyDown={e => e.key === 'Enter' && addCustom(customDislike, session.custom_dislikes || [], v => setSession({ ...session, custom_dislikes: v }), setCustomDislike)} />
+                  <button onClick={() => addCustom(customDislike, session.custom_dislikes || [], v => setSession({ ...session, custom_dislikes: v }), setCustomDislike)}
+                    className="px-4 py-2 bg-gray-200 rounded-lg text-sm">添加</button>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-4">
+                <div>
+                  <h3 className="font-semibold mb-2">📅 天数</h3>
+                  <div className="flex gap-1">
+                    {[1, 3, 5, 7].map(d => (
+                      <button key={d} onClick={() => setSession({ ...session, days: d })}
+                        className={`flex-1 py-2 rounded ${session.days === d ? 'bg-indigo-500 text-white' : 'bg-gray-100'}`}>{d}</button>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <h3 className="font-semibold mb-2">👥 人数</h3>
+                  <div className="flex gap-1">
+                    {[1, 2, 3, 4].map(n => (
+                      <button key={n} onClick={() => setSession({ ...session, person_count: n })}
+                        className={`flex-1 py-2 rounded ${session.person_count === n ? 'bg-pink-500 text-white' : 'bg-gray-100'}`}>{n}</button>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <h3 className="font-semibold mb-2">💰 预算</h3>
+                  <select value={session.budget} onChange={e => setSession({ ...session, budget: e.target.value })}
+                    className="w-full p-2 border rounded">
+                    <option>20-30元/天</option>
+                    <option>30-50元/天</option>
+                    <option>50-80元/天</option>
+                    <option>无限制</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <h3 className="font-semibold mb-2">🍴 餐次</h3>
+                <div className="flex flex-wrap gap-2">
+                  {MEAL_OPTIONS.map(opt => (
+                    <button key={opt} onClick={() => toggle(session.meals_per_day, opt, v => setSession({ ...session, meals_per_day: v }))}
+                      className={`px-3 py-1 rounded-full ${session.meals_per_day.includes(opt) ? 'bg-orange-500 text-white' : 'bg-gray-100'}`}>
+                      {MEAL_EMOJI[opt]} {opt}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Step 3: 确认 */}
+          {step === 3 && (
+            <div className="space-y-4">
+              <h3 className="font-semibold">📝 确认规划</h3>
+              <div className="bg-gray-50 rounded-lg p-4 space-y-2 text-sm">
+                <p><span className="text-gray-500">目标:</span> {profile.goals.join('、')}</p>
+                <p><span className="text-gray-500">忌口:</span> {[...profile.hard_restrictions, ...(profile.custom_restrictions || [])].join('、') || '无'}</p>
+                <p><span className="text-gray-500">风格:</span> {session.style_preferences.join('、')}</p>
+                <p><span className="text-gray-500">计划:</span> {session.days}天 · {session.person_count}人 · {session.meals_per_day.length}餐/天</p>
+              </div>
+              <div className="text-center pt-4">
+                <button onClick={handleSubmit} disabled={loading}
+                  className="bg-blue-500 text-white px-8 py-3 rounded-xl font-semibold hover:bg-blue-600 disabled:opacity-50">
+                  {loading ? '生成中...' : '🚀 开始生成'}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* 导航 */}
+          <div className="flex justify-between mt-6 pt-4 border-t">
+            <button onClick={() => setStep(s => Math.max(1, s - 1))} disabled={step === 1}
+              className="px-6 py-2 bg-gray-100 rounded-lg disabled:opacity-50">
+              ← 上一步
+            </button>
+            {step < 3 && (
+              <button onClick={() => setStep(s => Math.min(3, s + 1))} disabled={!canProceed()}
+                className="px-6 py-2 bg-blue-500 text-white rounded-lg disabled:opacity-50">
+                下一步 →
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
