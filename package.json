@@ -4,14 +4,12 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build && npx @opennextjs/cloudflare build --yes",
+    "build": "next build",
     "start": "next start",
     "lint": "eslint"
   },
   "dependencies": {
-    "@opennextjs/cloudflare": "^1.17.1",
     "next": "16.1.6",
-    "openai": "^6.27.0",
     "react": "19.2.3",
     "react-dom": "19.2.3"
   },

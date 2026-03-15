@@ -131,74 +131,92 @@ export default function Home() {
     setTimeout(() => setPage(2), 500);
   };
 
+  // 本地生成函数 - 使用预定义菜谱
+  const generateLocalPlan = () => {
+    const recipes = [
+      {
+        recipe_name: "西红柿炒蛋",
+        dish_type: "主菜",
+        time_cost: 15,
+        ingredients: ["西红柿", "鸡蛋", "盐", "糖", "油"],
+        steps: ["西红柿切块", "鸡蛋打散", "热油炒蛋", "加入西红柿翻炒", "调味出锅"]
+      },
+      {
+        recipe_name: "蒜蓉青菜", 
+        dish_type: "蔬菜",
+        time_cost: 10,
+        ingredients: ["青菜", "蒜", "盐", "油"],
+        steps: ["青菜洗净", "蒜切末", "热油爆香蒜末", "加入青菜翻炒", "调味出锅"]
+      },
+      {
+        recipe_name: "米饭",
+        dish_type: "主食", 
+        time_cost: 30,
+        ingredients: ["大米", "水"],
+        steps: ["大米洗净", "加水", "电饭煲煮熟"]
+      }
+    ];
+    
+    // 简单生成几天的计划
+    const days = [];
+    for (let i = 0; i < 3; i++) {
+      days.push({
+        day_index: i + 1,
+        meals: [
+          {
+            type: "早餐",
+            dishes: [{ dish_type: "主食", recipe: recipes[2] }]
+          },
+          {
+            type: "午餐", 
+            dishes: [
+              { dish_type: "主菜", recipe: recipes[0] },
+              { dish_type: "蔬菜", recipe: recipes[1] }
+            ]
+          },
+          {
+            type: "晚餐",
+            dishes: [
+              { dish_type: "主菜", recipe: recipes[0] },
+              { dish_type: "蔬菜", recipe: recipes[1] }
+            ]
+          }
+        ]
+      });
+    }
+    
+    return { days };
+  };
+
   const handleGenerate = async () => {
     if (style.length === 0) { setError('请选择风格'); return; }
     setLoading(true); setError(''); setMenuIndex(0);
     
-    try {
-      const res = await fetch('/api/generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          profile: { 
-            goals: goals.length > 0 ? goals : ['健康'], 
-            hard_restrictions: restrictions, 
-            custom_restrictions: customRestrictions,
-            kitchen_tools: kitchen 
-          },
-          session: { 
-            style_preferences: style, 
-            soft_dislikes: dislikes.map(d => d.item), 
-            days, 
-            meals_per_day: meals, 
-            person_count: people, 
-            budget 
-          }
-        })
-      });
-      const data = await res.json();
-      if (data.error) setError(data.error);
-      else { 
-        setResult(data); 
-        setPage(3);
-        // 保存到历史记录
-        const history = JSON.parse(localStorage.getItem('meal_history') || '[]');
-        history.unshift({ style: [...style], days: Number(days), date: new Date().toLocaleDateString() });
-        localStorage.setItem('meal_history', JSON.stringify(history.slice(0, 10)));
-      }
-    } catch (e) { setError('生成失败，请重试'); }
-    finally { setLoading(false); }
+    // 模拟 API 延迟
+    setTimeout(() => {
+      const data = generateLocalPlan();
+      setResult(data); 
+      setPage(3);
+      
+      // 保存到历史记录
+      const history = JSON.parse(localStorage.getItem('meal_history') || '[]');
+      history.unshift({ style: [...style], days: days, date: new Date().toLocaleDateString() });
+      localStorage.setItem('meal_history', JSON.stringify(history.slice(0, 10)));
+      
+      setLoading(false);
+    }, 1000);
   };
 
   const handleReplace = async () => {
     if (!result) return;
     setLoading(true); setError('');
-    try {
-      const res = await fetch('/api/generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          profile: { 
-            goals: goals.length > 0 ? goals : ['健康'], 
-            hard_restrictions: restrictions, 
-            custom_restrictions: customRestrictions,
-            kitchen_tools: kitchen 
-          },
-          session: { 
-            style_preferences: style, 
-            soft_dislikes: dislikes.map(d => d.item), 
-            days, 
-            meals_per_day: meals, 
-            person_count: people, 
-            budget 
-          }
-        })
-      });
-      const data = await res.json();
-      if (data.error) setError(data.error);
-      else { setResult(data); }
-    } catch (e) { setError('换一批失败，请重试'); }
-    finally { setLoading(false); }
+    
+    // 模拟 API 延迟
+    setTimeout(() => {
+      const data = generateLocalPlan();
+      setResult(data);
+      setLoading(false);
+    }, 1000);
   };
 
   const replaceDish = (dayIdx: number, mealIdx: number, dishIdx: number) => {
