@@ -132,53 +132,70 @@ export default function Home() {
   };
 
   // 本地生成函数 - 使用预定义菜谱
-  const generateLocalPlan = () => {
-    const recipes = [
-      {
-        recipe_name: "西红柿炒蛋",
-        dish_type: "主菜",
-        time_cost: 15,
-        ingredients: ["西红柿", "鸡蛋", "盐", "糖", "油"],
-        steps: ["西红柿切块", "鸡蛋打散", "热油炒蛋", "加入西红柿翻炒", "调味出锅"]
-      },
-      {
-        recipe_name: "蒜蓉青菜", 
-        dish_type: "蔬菜",
-        time_cost: 10,
-        ingredients: ["青菜", "蒜", "盐", "油"],
-        steps: ["青菜洗净", "蒜切末", "热油爆香蒜末", "加入青菜翻炒", "调味出锅"]
-      },
-      {
-        recipe_name: "米饭",
-        dish_type: "主食", 
-        time_cost: 30,
-        ingredients: ["大米", "水"],
-        steps: ["大米洗净", "加水", "电饭煲煮熟"]
-      }
+const generateLocalPlan = () => {
+    // 早餐、午餐、晚餐的菜谱库
+    const breakfastRecipes = [
+      { recipe_name: "白粥", dish_type: "主食", time_cost: 20, ingredients: ["大米", "水"], steps: ["大米洗净", "加水煮粥", "调味"] },
+      { recipe_name: "豆浆", dish_type: "饮品", time_cost: 10, ingredients: ["黄豆", "水"], steps: ["黄豆浸泡", "打成豆浆", "煮沸"] },
+      { recipe_name: "油条", dish_type: "主食", time_cost: 15, ingredients: ["面粉", "酵母", "油"], steps: ["和面", "发酵", "油炸"] },
+      { recipe_name: "包子", dish_type: "主食", time_cost: 30, ingredients: ["面粉", "酵母", "肉馅"], steps: ["和面", "发酵", "包馅", "蒸熟"] },
+      { recipe_name: "煎鸡蛋", dish_type: "主菜", time_cost: 5, ingredients: ["鸡蛋", "盐", "油"], steps: ["鸡蛋打散", "热油煎制", "调味"] },
+      { recipe_name: "清汤面", dish_type: "主食", time_cost: 15, ingredients: ["面条", "水", "盐", "葱"], steps: ["煮水", "下面条", "调味撒葱"] },
     ];
     
-    // 简单生成几天的计划
+    const mainDishes = [
+      { recipe_name: "西红柿炒蛋", dish_type: "主菜", time_cost: 15, ingredients: ["西红柿", "鸡蛋", "盐", "糖", "油"], steps: ["西红柿切块", "鸡蛋打散", "热油炒蛋", "加入西红柿翻炒", "调味出锅"] },
+      { recipe_name: "青椒肉丝", dish_type: "主菜", time_cost: 20, ingredients: ["猪肉", "青椒", "姜", "蒜", "酱油", "盐"], steps: ["猪肉切丝", "青椒切丝", "热油炒肉", "加入青椒翻炒", "调味出锅"] },
+      { recipe_name: "糖醋排骨", dish_type: "主菜", time_cost: 40, ingredients: ["排骨", "醋", "糖", "酱油", "料酒"], steps: ["排骨焯水", "炒糖色", "加入排骨", "加调料焖煮", "收汁"] },
+      { recipe_name: "红烧肉", dish_type: "主菜", time_cost: 60, ingredients: ["五花肉", "酱油", "糖", "料酒", "姜"], steps: ["五花肉切块", "焯水", "炒糖色", "加入肉块", "焖煮"] },
+      { recipe_name: "宫保鸡丁", dish_type: "主菜", time_cost: 25, ingredients: ["鸡胸肉", "花生", "干辣椒", "酱油", "醋"], steps: ["鸡肉切丁", "准备配料", "热油翻炒", "加入调料", "出锅"] },
+      { recipe_name: "鱼香肉丝", dish_type: "主菜", time_cost: 25, ingredients: ["猪肉", "木耳", "笋", "酱油", "醋", "糖"], steps: ["食材切丝", "炒肉丝", "加入配菜", "调味", "出锅"] },
+    ];
+    
+    const vegetables = [
+      { recipe_name: "蒜蓉青菜", dish_type: "蔬菜", time_cost: 10, ingredients: ["青菜", "蒜", "盐", "油"], steps: ["青菜洗净", "蒜切末", "热油爆香蒜末", "加入青菜翻炒", "调味出锅"] },
+      { recipe_name: "炒土豆丝", dish_type: "蔬菜", time_cost: 15, ingredients: ["土豆", "醋", "盐", "干辣椒"], steps: ["土豆切丝", "泡水去淀粉", "热油炒制", "加醋和盐", "出锅"] },
+      { recipe_name: "凉拌黄瓜", dish_type: "蔬菜", time_cost: 10, ingredients: ["黄瓜", "蒜", "酱油", "醋", "香油"], steps: ["黄瓜拍碎", "切块", "加入蒜泥", "加调料拌匀"] },
+      { recipe_name: "炒西兰花", dish_type: "蔬菜", time_cost: 15, ingredients: ["西兰花", "蒜", "盐", "油"], steps: ["西兰花切块", "焯水", "热油蒜爆", "加入西兰花翻炒", "调味"] },
+      { recipe_name: "番茄炒菜花", dish_type: "蔬菜", time_cost: 15, ingredients: ["菜花", "西红柿", "盐", "油"], steps: ["菜花切块", "西红柿切块", "热油翻炒", "加入西红柿", "调味出锅"] },
+    ];
+    
+    const staples = [
+      { recipe_name: "米饭", dish_type: "主食", time_cost: 30, ingredients: ["大米", "水"], steps: ["大米洗净", "加水", "电饭煲煮熟"] },
+      { recipe_name: "馒头", dish_type: "主食", time_cost: 40, ingredients: ["面粉", "酵母", "水"], steps: ["和面", "发酵", "蒸熟"] },
+      { recipe_name: "面条", dish_type: "主食", time_cost: 15, ingredients: ["面条", "水", "卤"], steps: ["煮水", "下面条", "盛入卤汁"] },
+      { recipe_name: "炒饭", dish_type: "主食", time_cost: 20, ingredients: ["米饭", "鸡蛋", "火腿", "盐", "油"], steps: ["米饭备好", "鸡蛋炒散", "加入米饭", "加入配料翻炒", "调味"] },
+    ];
+    
+    // 随机选择函数
+    const randomPick = (arr: any[]) => arr[Math.floor(Math.random() * arr.length)];
+    
+    // 生成几天的计划
     const days = [];
-    for (let i = 0; i < 3; i++) {
+    for (let i = 0; i < Number(days); i++) {
       days.push({
         day_index: i + 1,
         meals: [
           {
             type: "早餐",
-            dishes: [{ dish_type: "主食", recipe: recipes[2] }]
+            dishes: [
+              { dish_type: "主食", recipe: randomPick(breakfastRecipes) },
+            ]
           },
           {
             type: "午餐", 
             dishes: [
-              { dish_type: "主菜", recipe: recipes[0] },
-              { dish_type: "蔬菜", recipe: recipes[1] }
+              { dish_type: "主食", recipe: randomPick(staples) },
+              { dish_type: "主菜", recipe: randomPick(mainDishes) },
+              { dish_type: "蔬菜", recipe: randomPick(vegetables) }
             ]
           },
           {
             type: "晚餐",
             dishes: [
-              { dish_type: "主菜", recipe: recipes[0] },
-              { dish_type: "蔬菜", recipe: recipes[1] }
+              { dish_type: "主食", recipe: randomPick(staples) },
+              { dish_type: "主菜", recipe: randomPick(mainDishes) },
+              { dish_type: "蔬菜", recipe: randomPick(vegetables) }
             ]
           }
         ]
