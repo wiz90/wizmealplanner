@@ -334,7 +334,7 @@ const generateLocalPlan = () => {
                 {dislikes.length > 0 && (
                   <div className="flex items-start gap-2">
                     <span className="text-gray-400">🤔</span>
-                    <div><span className="text-gray-500">不爱吃:</span> <span className="text-gray-700">{dislikes.map(d => `${d.item}(${d.level})`).join('、')}</span></div>
+                    <div><span className="text-gray-500">不爱吃:</span> <span className="text-gray-700">{dislikes.map(d => `${d.level === '过敏' ? '过敏' : '不吃'}${d.item}`).join('、')}</span></div>
                   </div>
                 )}
                 {kitchen.length > 0 && (
@@ -424,12 +424,12 @@ const generateLocalPlan = () => {
               {dislikes.length > 0 && (
                 <div className="flex flex-wrap gap-2 mb-3">
                   {dislikes.map(d => (
-                    <span key={d.item} className="px-3 py-1.5 bg-orange-100 text-orange-700 rounded-full text-sm flex items-center gap-1.5">
-                      {d.level === '过敏' ? '🤮' : '🚫'} {d.item}
-                      <button onClick={() => cycleLevel(d.item)} className="text-orange-400 hover:text-orange-600 text-xs ml-1">
+                    <span key={d.item} className={`px-3 py-1.5 rounded-full text-sm flex items-center gap-1.5 ${d.level === '过敏' ? 'bg-red-100 text-red-700' : 'bg-orange-100 text-orange-700'}`}>
+                      {d.level === '过敏' ? '🤮 过敏' : '🚫 不吃'} {d.item}
+                      <button onClick={() => cycleLevel(d.item)} className="text-opacity-50 hover:text-opacity-100 text-xs ml-1">
                         ↻
                       </button>
-                      <button onClick={() => removeDislike(d.item)} className="text-orange-400 hover:text-orange-600">×</button>
+                      <button onClick={() => removeDislike(d.item)} className="text-opacity-50 hover:text-opacity-100">×</button>
                     </span>
                   ))}
                 </div>
