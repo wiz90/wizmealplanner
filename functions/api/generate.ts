@@ -100,14 +100,25 @@ export async function onRequestPost({ request, env }) {
     const data = await response.json();
     const content = data.choices?.[0]?.message?.content || '';
     
-    // Parse JSON from response
+    // Parse JSON from response - more robust extraction
     let jsonStr = content.trim();
+    
     // Handle markdown code blocks
     if (jsonStr.startsWith('```')) {
-      jsonStr = jsonStr.replace(/```json?/g, '').trim();
+      const match = jsonStr.match(/```[\s\S]*?({[\s\S]*})[\s\S]*?```/);
+      if (match) {
+        jsonStr = match[1];
+      } else {
+        jsonStr = jsonStr.replace(/```json?/g, '').replace(/```/g, '').trim();
+      }
     }
-    if (jsonStr.startsWith('```')) {
-      jsonStr = jsonStr.replace(/```/g, '').trim();
+    
+    // Find JSON object boundaries
+    const firstBrace = jsonStr.indexOf('{');
+    const lastBrace = jsonStr.lastIndexOf('}');
+    
+    if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+      jsonStr = jsonStr.substring(firstBrace, lastBrace + 1);
     }
     
     const result = JSON.parse(jsonStr);
