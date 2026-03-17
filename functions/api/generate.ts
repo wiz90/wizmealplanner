@@ -1,5 +1,4 @@
 export async function onRequestPost({ request, env }) {
-  // Set CORS headers
   const headers = {
     'Content-Type': 'application/json',
     'Access-Control-Allow-Origin': '*',
@@ -18,6 +17,12 @@ export async function onRequestPost({ request, env }) {
     const dislikes = (session.soft_dislikes || []).join('、') || '无';
     const goals = profile.goals?.join('、') || '健康';
     const isSimple = profile.goals?.includes('制作简单');
+    const kitchenTools = profile.kitchen_tools?.join('、') || '无';
+    const styles = session.style_preferences?.join('、') || '家常中餐';
+    const meals = session.meals_per_day?.join('、') || '早餐、午餐、晚餐';
+    const personCount = session.person_count || 2;
+    const budget = session.budget || '无限制';
+    const days = session.days;
     
     const simpleNote = isSimple ? '\n【重要】制作简单：选择步骤少（不超过3步）、食材易获取、烹饪难度低的菜谱。' : '';
     
@@ -27,14 +32,14 @@ export async function onRequestPost({ request, env }) {
 - 目标: ${goals}
 - 忌口: ${restrictions} (严格遵守)
 - 不爱吃: ${dislikes} (尽量避免)
-- 厨具: ${profile.kitchen_tools?.join('、') || '无'}${simpleNote}
+- 厨具: ${kitchenTools}${simpleNote}
 
 【本次计划】
-- 天数: ${session.days}天
-- 风格: ${session.style_preferences?.join('、') || '家常中餐'}
-- 餐次: ${session.meals_per_day?.join('、') || '早餐、午餐、晚餐'}
-- 人数: ${session.person_count || 2}人
-- 预算: ${session.budget || '无限制'}
+- 天数: ${days}天
+- 风格: ${styles}
+- 餐次: ${meals}
+- 人数: ${personCount}人
+- 预算: ${budget}
 
 【重要：中餐饮食结构要求】
 每餐必须包含:
@@ -64,11 +69,11 @@ export async function onRequestPost({ request, env }) {
 【严格要求】
 1. 严格返回JSON，不要有任何其他文字
 2. 每餐必须包含主食+主菜+蔬菜（早餐除外）
-3. ${session.days}天，每天3餐
+3. ${days}天，每天3餐
 4. 步骤要简洁明了，不超过3步
 5. 食材要家常易获取
-6. 【重要】每个食材必须包含具体用量，如"鸡蛋2个"、"大米100克"、"猪肉200克"
-7. 【重要】相同食材必须合并为一条，标注总用量，如"嫩豆腐 1盒"、"鸡蛋 4个"
+6. 每个食材必须包含具体用量，如"鸡蛋2个"、"大米100克"
+7. 相同食材必须合并为一条，标注总用量`;
 
     const apiKey = env.DEEPSEEK_API_KEY || '';
     
@@ -76,7 +81,6 @@ export async function onRequestPost({ request, env }) {
       return new Response(JSON.stringify({ error: 'API密钥未配置' }), { status: 500, headers });
     }
 
-    // Call DeepSeek API
     const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -93,7 +97,8 @@ export async function onRequestPost({ request, env }) {
 
     if (!response.ok) {
       const errorText = await response.text();
-      return new Response(JSON.stringify({ error: `API错误: ${response.status} - ${errorText}` }), {
+      const errMsg = 'API错误: ' + response.status + ' - ' + errorText;
+      return new Response(JSON.stringify({ error: errMsg }), {
         status: 500,
         headers,
       });
@@ -102,10 +107,8 @@ export async function onRequestPost({ request, env }) {
     const data = await response.json();
     const content = data.choices?.[0]?.message?.content || '';
     
-    // Parse JSON from response - more robust extraction
     let jsonStr = content.trim();
     
-    // Handle markdown code blocks
     if (jsonStr.startsWith('```')) {
       const match = jsonStr.match(/```[\s\S]*?({[\s\S]*})[\s\S]*?```/);
       if (match) {
@@ -115,7 +118,6 @@ export async function onRequestPost({ request, env }) {
       }
     }
     
-    // Find JSON object boundaries
     const firstBrace = jsonStr.indexOf('{');
     const lastBrace = jsonStr.lastIndexOf('}');
     
@@ -127,14 +129,14 @@ export async function onRequestPost({ request, env }) {
     
     return new Response(JSON.stringify(result), { headers });
   } catch (error) {
-    return new Response(JSON.stringify({ error: `生成失败: ${error.message}` }), {
+    const errMsg = '生成失败: ' + error.message;
+    return new Response(JSON.stringify({ error: errMsg }), {
       status: 500,
       headers,
     });
   }
 }
 
-// Handle OPTIONS for CORS
 export async function onRequestOptions() {
   return new Response(null, {
     headers: {
