@@ -126,9 +126,18 @@ export default function Home() {
   };
 
   const saveProfile = () => {
+    const profileSummary = [
+      goals.length > 0 && `目标: ${goals.join('、')}`,
+      (restrictions.length > 0 || customRestrictions.length > 0) && `忌口: ${[...restrictions, ...customRestrictions].join('、')}`,
+      dislikes.length > 0 && `不爱吃: ${dislikes.map(d => d.item).join('、')}`,
+    ].filter(Boolean).join('\n');
+    
+    const confirmed = confirm(`确认保存以下档案？\n\n${profileSummary}\n\n点击「确定」保存并开始规划，点击「取消」继续修改`);
+    if (!confirmed) return;
+    
     localStorage.setItem('meal_profile', JSON.stringify({ goals, restrictions, customRestrictions, kitchen, dislikes }));
     showToast('✅ 档案已保存');
-    setTimeout(() => setPage(2), 500);
+    setTimeout(() => setPage(2), 300);
   };
 
   // 本地生成函数 - 使用预定义菜谱
@@ -290,8 +299,17 @@ const generateLocalPlan = () => {
     return (
       <div className="min-h-screen bg-gradient-to-br from-orange-50 to-amber-50 py-12">
         <div className="max-w-md mx-auto px-4">
-          <h1 className="text-4xl font-bold text-center text-gray-900 mb-2">🍽️ 饮食规划</h1>
-          <p className="text-center text-gray-500 mb-8">智能生成你的专属食谱</p>
+          {/* 欢迎语 */}
+          <div className="text-center mb-8">
+            <h1 className="text-4xl font-bold text-gray-900 mb-3">🍽️ 饮食规划</h1>
+            <p className="text-lg text-gray-600 mb-2">智能生成你的专属食谱</p>
+            {!hasProfile && (
+              <div className="bg-blue-50 text-blue-700 px-4 py-3 rounded-xl text-sm mt-4">
+                👋 嗨！初次见面～<br/>
+                先填写你的饮食偏好，让我为你定制专属菜谱吧！
+              </div>
+            )}
+          </div>
           
           {/* 档案预览卡片 */}
           {hasProfile && (
