@@ -430,6 +430,10 @@ const generateLocalPlan = () => {
               {/* DIY */}
               <div className="flex gap-2 mt-3">
                 <input value={newDislike} onChange={e => setNewDislike(e.target.value)} placeholder="添加不爱吃的..." className="flex-1 px-3 py-2 border rounded-lg text-sm text-gray-900" onKeyDown={e => e.key === 'Enter' && addDislike()} />
+                <select value={newDislikeLevel} onChange={e => setNewDislikeLevel(e.target.value)} className="px-2 border rounded-lg text-sm text-gray-700">
+                  <option value="一点不吃">不吃</option>
+                  <option value="过敏">过敏</option>
+                </select>
                 <button onClick={addDislike} className="px-4 bg-gray-200 rounded-lg text-sm text-gray-700">添加</button>
               </div>
             </div>
