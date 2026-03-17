@@ -209,31 +209,70 @@ const generateLocalPlan = () => {
     if (style.length === 0) { setError('请选择风格'); return; }
     setLoading(true); setError(''); setMenuIndex(0);
     
-    // 模拟 API 延迟
-    setTimeout(() => {
-      const data = generateLocalPlan();
-      setResult(data); 
-      setPage(3);
-      
-      // 保存到历史记录
-      const history = JSON.parse(localStorage.getItem('meal_history') || '[]');
-      history.unshift({ style: [...style], days: days, date: new Date().toLocaleDateString() });
-      localStorage.setItem('meal_history', JSON.stringify(history.slice(0, 10)));
-      
-      setLoading(false);
-    }, 1000);
+    try {
+      const res = await fetch('/api/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          profile: { 
+            goals: goals.length > 0 ? goals : ['健康'], 
+            hard_restrictions: restrictions, 
+            custom_restrictions: customRestrictions,
+            kitchen_tools: kitchen 
+          },
+          session: { 
+            style_preferences: style, 
+            soft_dislikes: dislikes.map(d => d.item), 
+            days, 
+            meals_per_day: meals, 
+            person_count: people, 
+            budget 
+          }
+        })
+      });
+      const data = await res.json();
+      if (data.error) setError(data.error);
+      else { 
+        setResult(data); 
+        setPage(3);
+        // 保存到历史记录
+        const history = JSON.parse(localStorage.getItem('meal_history') || '[]');
+        history.unshift({ style: [...style], days: Number(days), date: new Date().toLocaleDateString() });
+        localStorage.setItem('meal_history', JSON.stringify(history.slice(0, 10)));
+      }
+    } catch (e) { setError('生成失败，请重试'); }
+    finally { setLoading(false); }
   };
 
   const handleReplace = async () => {
     if (!result) return;
     setLoading(true); setError('');
-    
-    // 模拟 API 延迟
-    setTimeout(() => {
-      const data = generateLocalPlan();
-      setResult(data);
-      setLoading(false);
-    }, 1000);
+    try {
+      const res = await fetch('/api/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          profile: { 
+            goals: goals.length > 0 ? goals : ['健康'], 
+            hard_restrictions: restrictions, 
+            custom_restrictions: customRestrictions,
+            kitchen_tools: kitchen 
+          },
+          session: { 
+            style_preferences: style, 
+            soft_dislikes: dislikes.map(d => d.item), 
+            days, 
+            meals_per_day: meals, 
+            person_count: people, 
+            budget 
+          }
+        })
+      });
+      const data = await res.json();
+      if (data.error) setError(data.error);
+      else { setResult(data); }
+    } catch (e) { setError('换一批失败，请重试'); }
+    finally { setLoading(false); }
   };
 
   const replaceDish = (dayIdx: number, mealIdx: number, dishIdx: number) => {
