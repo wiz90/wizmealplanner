@@ -171,9 +171,9 @@ const generateLocalPlan = () => {
     const randomPick = (arr: any[]) => arr[Math.floor(Math.random() * arr.length)];
     
     // 生成几天的计划
-    const days = [];
+    const daysArray = [];
     for (let i = 0; i < Number(days); i++) {
-      days.push({
+      daysArray.push({
         day_index: i + 1,
         meals: [
           {
@@ -202,7 +202,7 @@ const generateLocalPlan = () => {
       });
     }
     
-    return { days };
+    return { days: daysArray };
   };
 
   const handleGenerate = async () => {
