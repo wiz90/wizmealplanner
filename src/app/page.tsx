@@ -330,12 +330,12 @@ const generateLocalPlan = () => {
           )}
 
           <div className="space-y-4">
-            <button onClick={() => setPage(2)} className="w-full py-4 bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-2xl font-semibold text-lg shadow-lg">
-              {hasProfile ? '🎯 开始规划' : '✨ 新建规划'}
+            <button onClick={() => setPage(hasProfile ? 2 : 1)} className="w-full py-4 bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-2xl font-semibold text-lg shadow-lg">
+              {hasProfile ? '🎯 开始规划' : '📝 填写档案'}
             </button>
-            {!hasProfile && (
-              <button onClick={() => setPage(1)} className="w-full py-4 bg-white text-gray-700 rounded-2xl font-semibold border-2 border-gray-200">
-                📝 填写档案
+            {hasProfile && (
+              <button onClick={() => setPage(2)} className="w-full py-4 bg-white text-gray-700 rounded-2xl font-semibold border-2 border-gray-200">
+                ✨ 新建规划
               </button>
             )}
             <button onClick={() => setPage(5)} className="w-full py-3 bg-gray-100 text-gray-600 rounded-xl font-medium">
@@ -389,7 +389,7 @@ const generateLocalPlan = () => {
               )}
             </div>
 
-            {/* 不爱吃 - 简化 UI */}
+            {/* 不爱吃 - 统一样式 */}
             <div>
               <h3 className="font-semibold text-gray-900 mb-3">🤔 不爱吃</h3>
               {/* 预设 */}
@@ -397,22 +397,22 @@ const generateLocalPlan = () => {
                 const existing = dislikes.find(x => x.item === d.value);
                 return (
                   <button key={d.value} onClick={() => existing ? removeDislike(d.value) : setDislikes([...dislikes, { item: d.value, level: '一点不吃' }])}
-                  className={`px-3 py-1.5 rounded-full text-sm ${existing ? 'bg-yellow-500 text-white' : 'bg-gray-100 text-gray-700'}`}>
+                  className={`px-3 py-1.5 rounded-full text-sm ${existing ? 'bg-orange-500 text-white' : 'bg-gray-100 text-gray-700'}`}>
                     {d.emoji} {d.value}
                   </button>
                 );
               })}</div>
-              {/* 已选列表 + 程度 */}
+              {/* 已选列表 - 统一样式 */}
               {dislikes.length > 0 && (
-                <div className="space-y-2 mb-3">
+                <div className="flex flex-wrap gap-2 mb-3">
                   {dislikes.map(d => (
-                    <div key={d.item} className="flex items-center gap-2 bg-yellow-50 px-3 py-2 rounded-lg">
-                      <span className="text-sm text-gray-800">{d.item}</span>
-                      <button onClick={() => cycleLevel(d.item)} className={`px-2 py-0.5 rounded text-xs text-white ${DISLIKE_LEVELS.find(l => l.value === d.level)?.color}`}>
-                        {d.level}
+                    <span key={d.item} className="px-3 py-1.5 bg-orange-100 text-orange-700 rounded-full text-sm flex items-center gap-1.5">
+                      {d.level === '过敏' ? '🤮' : '🚫'} {d.item}
+                      <button onClick={() => cycleLevel(d.item)} className="text-orange-400 hover:text-orange-600 text-xs ml-1">
+                        ↻
                       </button>
-                      <button onClick={() => removeDislike(d.item)} className="ml-auto text-red-500">×</button>
-                    </div>
+                      <button onClick={() => removeDislike(d.item)} className="text-orange-400 hover:text-orange-600">×</button>
+                    </span>
                   ))}
                 </div>
               )}
