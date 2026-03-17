@@ -20,7 +20,7 @@ const STYLE_OPTIONS = [
 const MEAL_OPTIONS = [{ value: '早餐', emoji: '🌅' }, { value: '上午茶', emoji: '☕' }, { value: '午餐', emoji: '☀️' }, { value: '下午茶', emoji: '🍰' }, { value: '晚餐', emoji: '🌙' }];
 const DISLIKE_LEVELS = [
   { value: '一点不吃', color: 'bg-orange-500' },
-  { value: '过敏', color: 'bg-red-500' },
+  { value: '少吃', color: 'bg-yellow-500' },
 ];
 
 // 相声报菜名顺序
@@ -334,7 +334,7 @@ const generateLocalPlan = () => {
                 {dislikes.length > 0 && (
                   <div className="flex items-start gap-2">
                     <span className="text-gray-400">🤔</span>
-                    <div><span className="text-gray-500">不爱吃:</span> <span className="text-gray-700">{dislikes.map(d => `${d.level === '过敏' ? '过敏' : '不吃'}${d.item}`).join('、')}</span></div>
+                    <div><span className="text-gray-500">不爱吃:</span> <span className="text-gray-700">{dislikes.map(d => `${d.level === '少吃' ? '少吃' : '一点不吃'}${d.item}`).join('、')}</span></div>
                   </div>
                 )}
                 {kitchen.length > 0 && (
@@ -410,7 +410,7 @@ const generateLocalPlan = () => {
             {/* 不爱吃 - 简化样式 */}
             <div>
               <h3 className="font-semibold text-gray-900 mb-3">🤔 不爱吃</h3>
-              {/* 预设 - 点击切换: 不吃 -> 过敏 -> 移除 */}
+              {/* 预设 - 点击切换: 一点不吃 -> 少吃 -> 移除 */}
               <div className="flex flex-wrap gap-2">{DISLIKE_OPTIONS.map(d => {
                 const existing = dislikes.find(x => x.item === d.value);
                 return (
@@ -418,13 +418,13 @@ const generateLocalPlan = () => {
                     if (!existing) {
                       setDislikes([...dislikes, { item: d.value, level: '一点不吃' }]);
                     } else if (existing.level === '一点不吃') {
-                      setDislikes(dislikes.map(x => x.item === d.value ? { ...x, level: '过敏' } : x));
+                      setDislikes(dislikes.map(x => x.item === d.value ? { ...x, level: '少吃' } : x));
                     } else {
                       removeDislike(d.value);
                     }
                   }}
-                  className={`px-3 py-1.5 rounded-full text-sm ${existing ? (existing.level === '过敏' ? 'bg-red-500 text-white' : 'bg-orange-500 text-white') : 'bg-gray-100 text-gray-700'}`}>
-                    {existing ? (existing.level === '过敏' ? '🤮' : '🚫') : d.emoji} {d.value}
+                  className={`px-3 py-1.5 rounded-full text-sm ${existing ? (existing.level === '少吃' ? 'bg-yellow-500 text-white' : 'bg-orange-500 text-white') : 'bg-gray-100 text-gray-700'}`}>
+                    {existing ? (existing.level === '少吃' ? '🤔 少吃' : '🚫 一点不吃') : d.emoji} {d.value}
                   </button>
                 );
               })}</div>
@@ -432,8 +432,8 @@ const generateLocalPlan = () => {
               <div className="flex gap-2 mt-3">
                 <input value={newDislike} onChange={e => setNewDislike(e.target.value)} placeholder="添加不爱吃的..." className="flex-1 px-3 py-2 border rounded-lg text-sm text-gray-900" onKeyDown={e => e.key === 'Enter' && addDislike()} />
                 <select value={newDislikeLevel} onChange={e => setNewDislikeLevel(e.target.value)} className="px-2 border rounded-lg text-sm text-gray-700">
-                  <option value="一点不吃">不吃</option>
-                  <option value="过敏">过敏</option>
+                  <option value="一点不吃">一点不吃</option>
+                  <option value="少吃">少吃</option>
                 </select>
                 <button onClick={addDislike} className="px-4 bg-gray-200 rounded-lg text-sm text-gray-700">添加</button>
               </div>
