@@ -110,6 +110,7 @@ export default function Home() {
     if (!newDislike.trim()) return;
     if (!dislikes.find(d => d.item === newDislike.trim())) {
       setDislikes([...dislikes, { item: newDislike.trim(), level: newDislikeLevel }]);
+      showToast('✅ 已添加: ' + newDislike.trim());
     }
     setNewDislike('');
   };
