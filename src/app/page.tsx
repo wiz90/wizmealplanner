@@ -7,7 +7,7 @@ const GOAL_OPTIONS = [
   { value: '减脂', emoji: '🔥' }, { value: '增肌', emoji: '🏋️' },
   { value: '制作简单', emoji: '⚡' }, { value: '便当', emoji: '🍱' }, { value: '替代外卖', emoji: '🍔' }, { value: '清淡', emoji: '🥗' },
 ];
-const RESTRICTION_OPTIONS = ['海鲜过敏', '奶制品过敏', '坚果过敏', '麸质过敏', '不吃牛肉', '不吃猪肉', '不吃鸡肉', '不吃酒精', '不吃生冷', '不吃辣'];
+const RESTRICTION_OPTIONS = ['海鲜', '牛肉', '猪肉', '鸡肉', '奶制品', '坚果', '麸质', '酒精', '生冷', '辣'];
 const DISLIKE_OPTIONS = [{ value: '香菜', emoji: '🌿' }, { value: '内脏', emoji: '🫀' }, { value: '胡萝卜', emoji: '🥕' }, { value: '茄子', emoji: '🍆' }, { value: '青椒', emoji: '🫑' }, { value: '苦瓜', emoji: '🤢' }, { value: '香菇', emoji: '🍄' }, { value: '腐竹', emoji: '🧈' }];
 const KITCHEN_OPTIONS = [{ value: '炒锅', emoji: '🍳' }, { value: '平底锅', emoji: '🍳' }, { value: '电饭锅', emoji: '🍚' }, { value: '空气炸锅', emoji: '🍟' }, { value: '微波炉', emoji: '📻' }, { value: '烤箱', emoji: '🥖' }, { value: '电压力锅', emoji: '🥘' }, { value: '汤锅', emoji: '🍲' }, { value: '蒸锅', emoji: '🥟' }];
 const STYLE_OPTIONS = [
@@ -407,39 +407,30 @@ const generateLocalPlan = () => {
               )}
             </div>
 
-            {/* 不爱吃 - 统一样式 */}
+            {/* 不爱吃 - 简化样式 */}
             <div>
               <h3 className="font-semibold text-gray-900 mb-3">🤔 不爱吃</h3>
-              {/* 预设 */}
-              <div className="flex flex-wrap gap-2 mb-3">{DISLIKE_OPTIONS.map(d => {
+              {/* 预设 - 点击切换: 不吃 -> 过敏 -> 移除 */}
+              <div className="flex flex-wrap gap-2">{DISLIKE_OPTIONS.map(d => {
                 const existing = dislikes.find(x => x.item === d.value);
                 return (
-                  <button key={d.value} onClick={() => existing ? removeDislike(d.value) : setDislikes([...dislikes, { item: d.value, level: '一点不吃' }])}
-                  className={`px-3 py-1.5 rounded-full text-sm ${existing ? 'bg-orange-500 text-white' : 'bg-gray-100 text-gray-700'}`}>
-                    {d.emoji} {d.value}
+                  <button key={d.value} onClick={() => {
+                    if (!existing) {
+                      setDislikes([...dislikes, { item: d.value, level: '一点不吃' }]);
+                    } else if (existing.level === '一点不吃') {
+                      setDislikes(dislikes.map(x => x.item === d.value ? { ...x, level: '过敏' } : x));
+                    } else {
+                      removeDislike(d.value);
+                    }
+                  }}
+                  className={`px-3 py-1.5 rounded-full text-sm ${existing ? (existing.level === '过敏' ? 'bg-red-500 text-white' : 'bg-orange-500 text-white') : 'bg-gray-100 text-gray-700'}`}>
+                    {existing ? (existing.level === '过敏' ? '🤮' : '🚫') : d.emoji} {d.value}
                   </button>
                 );
               })}</div>
-              {/* 已选列表 - 统一样式 */}
-              {dislikes.length > 0 && (
-                <div className="flex flex-wrap gap-2 mb-3">
-                  {dislikes.map(d => (
-                    <span key={d.item} className={`px-3 py-1.5 rounded-full text-sm flex items-center gap-1.5 ${d.level === '过敏' ? 'bg-red-100 text-red-700' : 'bg-orange-100 text-orange-700'}`}>
-                      {d.level === '过敏' ? '🤮 过敏' : '🚫 不吃'} {d.item}
-                      <button onClick={() => cycleLevel(d.item)} className="text-opacity-50 hover:text-opacity-100 text-xs ml-1">
-                        ↻
-                      </button>
-                      <button onClick={() => removeDislike(d.item)} className="text-opacity-50 hover:text-opacity-100">×</button>
-                    </span>
-                  ))}
-                </div>
-              )}
               {/* DIY */}
-              <div className="flex gap-2">
+              <div className="flex gap-2 mt-3">
                 <input value={newDislike} onChange={e => setNewDislike(e.target.value)} placeholder="添加不爱吃的..." className="flex-1 px-3 py-2 border rounded-lg text-sm text-gray-900" onKeyDown={e => e.key === 'Enter' && addDislike()} />
-                <select value={newDislikeLevel} onChange={e => setNewDislikeLevel(e.target.value)} className="px-2 border rounded-lg text-sm text-gray-700">
-                  {DISLIKE_LEVELS.map(l => <option key={l.value} value={l.value}>{l.value}</option>)}
-                </select>
                 <button onClick={addDislike} className="px-4 bg-gray-200 rounded-lg text-sm text-gray-700">添加</button>
               </div>
             </div>
