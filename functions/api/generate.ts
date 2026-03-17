@@ -66,7 +66,9 @@ export async function onRequestPost({ request, env }) {
 2. 每餐必须包含主食+主菜+蔬菜（早餐除外）
 3. ${session.days}天，每天3餐
 4. 步骤要简洁明了，不超过3步
-5. 食材要家常易获取`;
+5. 食材要家常易获取
+6. 【重要】每个食材必须包含具体用量，如"鸡蛋2个"、"大米100克"、"猪肉200克"
+7. 【重要】相同食材必须合并为一条，标注总用量，如"嫩豆腐 1盒"、"鸡蛋 4个"
 
     const apiKey = env.DEEPSEEK_API_KEY || '';
     

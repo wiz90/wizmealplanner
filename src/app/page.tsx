@@ -593,8 +593,9 @@ const generateLocalPlan = () => {
 
 // ========== 备菜页 ==========
 if (page === 4) {
-  // 解析食材并分类
-  const categories = { '🥩 肉类': new Set<string>(), '🥬 蔬菜': new Set<string>(), '🧂 调料': new Set<string>(), '🥚 其他': new Set<string>() };
+  // 解析食材并分类 - 保留用量，合并同类项
+  const ingredientMap = new Map<string, string>(); // name -> full ingredient with quantity
+  
   const meatKeywords = ['鸡', '鸭', '鹅', '猪', '牛', '羊', '鱼', '虾', '蟹', '肉', '蛋'];
   const veggieKeywords = ['菜', '青', '西红', '土', '萝', '瓜', '椒', '茄', '菇', '木耳', '笋', '豆'];
   const sauceKeywords = ['油', '盐', '酱', '醋', '糖', '味', '鸡精', '淀粉', '胡椒', '蒜', '葱', '姜'];
@@ -603,24 +604,36 @@ if (page === 4) {
     d.meals?.forEach((m: any) => {
       m.dishes?.forEach((dish: any) => {
         dish.recipe?.ingredients?.forEach((ing: string) => {
-          // 清理: 去掉数字、"少许"等
-          let name = ing.replace(/\d+/g, '').replace(/少许|适量|一些|几/g, '').trim();
-          if (!name) return;
+          // 提取基础食材名（去掉数字但保留用量描述）
+          let baseName = ing.replace(/少许|适量|一些|几/g, '').trim();
+          // 提取用量部分
+          let quantity = ing.replace(baseName, '').trim();
           
-          // 分类
-          let added = false;
-          for (const k of meatKeywords) { if (name.includes(k)) { categories['🥩 肉类'].add(name); added = true; break; } }
-          if (!added) for (const k of veggieKeywords) { if (name.includes(k)) { categories['🥬 蔬菜'].add(name); added = true; break; } }
-          if (!added) for (const k of sauceKeywords) { if (name.includes(k)) { categories['🧂 调料'].add(name); added = true; break; } }
-          if (!added) categories['🥚 其他'].add(name);
+          if (!baseName) return;
+          
+          // 合并同类项：保留第一个出现的完整食材描述
+          if (!ingredientMap.has(baseName)) {
+            ingredientMap.set(baseName, ing);
+          }
         });
       });
     });
   });
+  
+  // 按分类组织
+  const categories: Record<string, string[]> = { '🥩 肉类': [], '🥬 蔬菜': [], '🧂 调料': [], '🥚 其他': [] };
+  
+  ingredientMap.forEach((fullIng, baseName) => {
+    let added = false;
+    for (const k of meatKeywords) { if (baseName.includes(k)) { categories['🥩 肉类'].push(fullIng); added = true; break; } }
+    if (!added) for (const k of veggieKeywords) { if (baseName.includes(k)) { categories['🥬 蔬菜'].push(fullIng); added = true; break; } }
+    if (!added) for (const k of sauceKeywords) { if (baseName.includes(k)) { categories['🧂 调料'].push(fullIng); added = true; break; } }
+    if (!added) categories['🥚 其他'].push(fullIng);
+  });
 
   const toggleCheck = (name: string) => setChecked((p:any) => ({ ...p, [name]: !p[name] }));
   const checkedCount = Object.values(checked).filter(Boolean).length;
-  const totalCount = Object.values(categories).reduce((s, c) => s + c.size, 0);
+  const totalCount = Object.values(categories).reduce((s: number, c: string[]) => s + c.length, 0);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 to-amber-50 py-8">
@@ -637,11 +650,11 @@ if (page === 4) {
 
           <div className="space-y-4 max-h-96 overflow-y-auto">
             {Object.entries(categories).map(([cat, items]) => (
-              items.size > 0 && (
+              items.length > 0 && (
                 <div key={cat}>
-                  <div className="font-semibold text-gray-700 mb-2">{cat} ({items.size})</div>
+                  <div className="font-semibold text-gray-700 mb-2">{cat} ({items.length})</div>
                   <div className="space-y-1">
-                    {Array.from(items).sort().map(name => (
+                    {items.sort().map(name => (
                       <label key={name} className={`flex items-center p-2 rounded cursor-pointer ${checked[name] ? 'bg-green-50' : 'bg-gray-50'}`}>
                         <input type="checkbox" checked={!!checked[name]} onChange={() => toggleCheck(name)} className="w-4 h-4 mr-2" />
                         <span className={`text-sm ${checked[name] ? 'text-gray-400 line-through' : 'text-gray-700'}`}>{name}</span>
