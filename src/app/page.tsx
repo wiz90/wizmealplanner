@@ -19,9 +19,8 @@ const STYLE_OPTIONS = [
 ];
 const MEAL_OPTIONS = [{ value: '早餐', emoji: '🌅' }, { value: '上午茶', emoji: '☕' }, { value: '午餐', emoji: '☀️' }, { value: '下午茶', emoji: '🍰' }, { value: '晚餐', emoji: '🌙' }];
 const DISLIKE_LEVELS = [
-  { value: '一点不吃', color: 'bg-red-500' },
-  { value: '少吃', color: 'bg-yellow-500' },
-  { value: '适量', color: 'bg-green-500' },
+  { value: '一点不吃', color: 'bg-orange-500' },
+  { value: '过敏', color: 'bg-red-500' },
 ];
 
 // 相声报菜名顺序
