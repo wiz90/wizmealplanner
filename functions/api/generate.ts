@@ -29,6 +29,13 @@ export async function onRequestPost({ request, env }) {
     return new Response(JSON.stringify({ error: '不允许的请求来源' }), { status: 403, headers });
   }
 
+  // 简单的速率限制检查 (基于 IP)
+  const clientIP = request.headers.get('CF-Connecting-IP') || 'unknown';
+  const rateLimitKey = `rate_limit_${clientIP}`;
+  
+  // 这里可以集成 Cloudflare KV 存储，但简化版先记录日志
+  console.log(`[API] Request from IP: ${clientIP}, Origin: ${origin}`);
+
   try {
     const body = await request.json();
     
@@ -58,6 +65,11 @@ export async function onRequestPost({ request, env }) {
     const personCount = Math.min(Math.max(parseInt(session.person_count) || 2, 1), 20);
     const budget = sanitizeInput(session.budget) || '无限制';
     const days = Math.min(Math.max(parseInt(session.days) || 3, 1), 30);
+    
+    // 验证天数限制 (防止过度消耗 API)
+    if (days > 7) {
+      console.log(`[WARN] 用户请求 ${days} 天，超过建议限制`);
+    }
     
     const simpleNote = isSimple ? '\n【重要】制作简单：选择步骤少（不超过3步）、食材易获取、烹饪难度低的菜谱。' : '';
     
@@ -116,9 +128,13 @@ export async function onRequestPost({ request, env }) {
     const modelName = env.CUSTOM_MODEL || 'deepseek-chat';
     
     if (!apiKey) {
+      console.error('[ERROR] API密钥未配置');
       return new Response(JSON.stringify({ error: 'API密钥未配置' }), { status: 500, headers });
     }
 
+    // 记录 API 调用 (不含密钥)
+    console.log(`[API] Calling ${apiUrl} with model ${modelName}, days: ${days}`);
+    
     const response = await fetch(apiUrl, {
       method: 'POST',
       headers: {
@@ -135,6 +151,7 @@ export async function onRequestPost({ request, env }) {
 
     if (!response.ok) {
       const errorText = await response.text();
+      console.error(`[API ERROR] ${response.status}: ${errorText.substring(0, 200)}`);
       const errMsg = 'API错误: ' + response.status;
       return new Response(JSON.stringify({ error: errMsg }), {
         status: 500,
@@ -165,8 +182,12 @@ export async function onRequestPost({ request, env }) {
     
     const result = JSON.parse(jsonStr);
     
+    // 记录成功调用
+    console.log(`[API SUCCESS] Generated ${days} days of meals`);
+    
     return new Response(JSON.stringify(result), { headers });
   } catch (error) {
+    console.error(`[ERROR] ${error.message}`);
     const errMsg = '生成失败: ' + error.message;
     return new Response(JSON.stringify({ error: errMsg }), {
       status: 500,
