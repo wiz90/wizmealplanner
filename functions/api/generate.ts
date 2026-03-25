@@ -197,6 +197,8 @@ export async function onRequestPost({ request, env }) {
     
     let jsonStr = content.trim();
     
+    // === P0: 容错 JSON 提取 ===
+    // 尝试从 markdown 代码块中提取
     if (jsonStr.startsWith('```')) {
       const match = jsonStr.match(/```[\s\S]*?({[\s\S]*})[\s\S]*?```/);
       if (match) {
@@ -206,6 +208,7 @@ export async function onRequestPost({ request, env }) {
       }
     }
     
+    // 提取 { ... } 区间
     const firstBrace = jsonStr.indexOf('{');
     const lastBrace = jsonStr.lastIndexOf('}');
     
@@ -213,7 +216,69 @@ export async function onRequestPost({ request, env }) {
       jsonStr = jsonStr.substring(firstBrace, lastBrace + 1);
     }
     
-    const result = JSON.parse(jsonStr);
+    // 容错修复策略
+    let result = null;
+    const strategies = [
+      // 策略0: 直接解析
+      () => { result = JSON.parse(jsonStr); },
+      
+      // 策略1: 移除行尾逗号 (trailing comma before } or ])
+      () => {
+        const fixed = jsonStr.replace(/,(\s*[}\]])/g, '$1');
+        result = JSON.parse(fixed);
+      },
+      
+      // 策略2: 移除多余逗号 (e.g., [...,])
+      () => {
+        const fixed = jsonStr
+          .replace(/,\s*,/g, ',')           // 双逗号变单
+          .replace(/,\s*]/g, ']')            // 数组尾逗号
+          .replace(/,\s*}/g, '}');          // 对象尾逗号
+        result = JSON.parse(fixed);
+      },
+      
+      // 策略3: 修复被截断的 JSON（补全缺失括号）
+      () => {
+        const openBraces = (jsonStr.match(/{/g) || []).length;
+        const closeBraces = (jsonStr.match(/}/g) || []).length;
+        const openBrackets = (jsonStr.match(/\[/g) || []).length;
+        const closeBrackets = (jsonStr.match(/\]/g) || []).length;
+        let fixed = jsonStr;
+        if (openBraces > closeBraces) fixed += '}'.repeat(openBraces - closeBraces);
+        if (openBrackets > closeBrackets) fixed += ']'.repeat(openBrackets - closeBrackets);
+        result = JSON.parse(fixed);
+      },
+      
+      // 策略4: 修复多余逗号 + 补全括号
+      () => {
+        let fixed = jsonStr
+          .replace(/,\s*,/g, ',')
+          .replace(/,\s*]/g, ']')
+          .replace(/,\s*}/g, '}')
+          .replace(/,\s*([}\])])/g, '$1');  // 清理末尾逗号
+        const openBraces = (fixed.match(/{/g) || []).length;
+        const closeBraces = (fixed.match(/}/g) || []).length;
+        const openBrackets = (fixed.match(/\[/g) || []).length;
+        const closeBrackets = (fixed.match(/\]/g) || []).length;
+        if (openBraces > closeBraces) fixed += '}'.repeat(openBraces - closeBraces);
+        if (openBrackets > closeBrackets) fixed += ']'.repeat(openBrackets - closeBrackets);
+        result = JSON.parse(fixed);
+      },
+    ];
+    
+    for (let i = 0; i < strategies.length; i++) {
+      try {
+        strategies[i]();
+        if (i > 0) console.log(`[JSON FIX] Strategy ${i} succeeded`);
+        break;
+      } catch (e) {
+        if (i === strategies.length - 1) {
+          console.log(`[JSON ERROR] All ${strategies.length} strategies failed: ${e.message}`);
+          console.log(`[JSON RAW] ${jsonStr.substring(0, 200)}...`);
+          return new Response(JSON.stringify({ error: '数据解析失败，请重试' }), { status: 500, headers });
+        }
+      }
+    }
     console.log(`[SUCCESS] Generated ${days} days plan`);
     
     return new Response(JSON.stringify(result), { headers });

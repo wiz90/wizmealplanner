@@ -599,14 +599,34 @@ if (page === 4) {
     d.meals?.forEach((m: any) => {
       m.dishes?.forEach((dish: any) => {
         dish.recipe?.ingredients?.forEach((ing: string) => {
-          // 提取基础食材名（去掉数字但保留用量描述）
-          let baseName = ing.replace(/少许|适量|一些|几/g, '').trim();
-          // 提取用量部分
-          let quantity = ing.replace(baseName, '').trim();
+          if (!ing || !ing.trim()) return;
           
-          if (!baseName) return;
+          // 提取数字用量
+          const qtyMatch = ing.match(/^([^\d]*)(\d+(?:\.\d+)?)\s*(毫升|克|kg|千克|个|把|勺|杯|升|L|ml|g)?(.*)$/);
+          let baseName = ing;
+          if (qtyMatch) {
+            baseName = qtyMatch[1].trim();
+            if (!baseName) baseName = ing.replace(/^\d+/, '').trim();
+          }
           
-          // 合并同类项：保留第一个出现的完整食材描述
+          // 去掉描述词
+          baseName = baseName.replace(/少许|适量|一些|几/g, '').trim();
+          if (!baseName) baseName = ing.replace(/少许|适量|一些|几/g, '').trim();
+          
+          // 统一"水"类食材
+          const waterAliases = ['水', '纯净水', '矿泉水', '白开水', '凉白开', '饮用水', '开水', '温开水'];
+          const isWater = waterAliases.some(w => baseName === w || baseName.includes(w));
+          if (isWater) baseName = '水';
+          
+          // 统一"油"类
+          const oilAliases = ['食用油', '植物油', '色拉油', '橄榄油', '花生油', '菜籽油'];
+          if (oilAliases.some(o => baseName === o)) baseName = '油';
+          
+          // 统一"盐"
+          const saltAliases = ['盐', '食盐', '海盐'];
+          if (saltAliases.some(s => baseName === s)) baseName = '盐';
+          
+          // 合并同类项：累加数字用量
           if (!ingredientMap.has(baseName)) {
             ingredientMap.set(baseName, ing);
           }
