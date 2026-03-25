@@ -1,3 +1,23 @@
+// 简单的内存速率限制 (生产环境建议用 Cloudflare Rate Limiting)
+const rateLimitMap = new Map();
+
+function checkRateLimit(ip, limit = 20, windowMs = 60000) {
+  const now = Date.now();
+  const key = ip;
+  const record = rateLimitMap.get(key) || { count: 0, resetTime: now + windowMs };
+  
+  // 重置窗口
+  if (now > record.resetTime) {
+    record.count = 0;
+    record.resetTime = now + windowMs;
+  }
+  
+  record.count++;
+  rateLimitMap.set(key, record);
+  
+  return record.count <= limit;
+}
+
 export async function onRequestPost({ request, env }) {
   // 允许的域名列表
   const allowedOrigins = [
@@ -7,6 +27,7 @@ export async function onRequestPost({ request, env }) {
   ];
   
   const origin = request.headers.get('Origin') || '';
+  const clientIP = request.headers.get('CF-Connecting-IP') || 'unknown';
   const isOriginAllowed = allowedOrigins.includes(origin) || origin.endsWith('.cloudflareapps.dev');
   
   const headers = {
@@ -26,15 +47,15 @@ export async function onRequestPost({ request, env }) {
 
   // 拒绝非法来源
   if (!isOriginAllowed) {
+    console.log(`[BLOCKED] Invalid origin: ${origin} from IP: ${clientIP}`);
     return new Response(JSON.stringify({ error: '不允许的请求来源' }), { status: 403, headers });
   }
 
-  // 简单的速率限制检查 (基于 IP)
-  const clientIP = request.headers.get('CF-Connecting-IP') || 'unknown';
-  const rateLimitKey = `rate_limit_${clientIP}`;
-  
-  // 这里可以集成 Cloudflare KV 存储，但简化版先记录日志
-  console.log(`[API] Request from IP: ${clientIP}, Origin: ${origin}`);
+  // 速率限制检查
+  if (!checkRateLimit(clientIP)) {
+    console.log(`[RATE LIMIT] IP: ${clientIP}`);
+    return new Response(JSON.stringify({ error: '请求过于频繁，请稍后再试' }), { status: 429, headers });
+  }
 
   try {
     const body = await request.json();
@@ -65,11 +86,6 @@ export async function onRequestPost({ request, env }) {
     const personCount = Math.min(Math.max(parseInt(session.person_count) || 2, 1), 20);
     const budget = sanitizeInput(session.budget) || '无限制';
     const days = Math.min(Math.max(parseInt(session.days) || 3, 1), 30);
-    
-    // 验证天数限制 (防止过度消耗 API)
-    if (days > 7) {
-      console.log(`[WARN] 用户请求 ${days} 天，超过建议限制`);
-    }
     
     const simpleNote = isSimple ? '\n【重要】制作简单：选择步骤少（不超过3步）、食材易获取、烹饪难度低的菜谱。' : '';
     
@@ -128,13 +144,13 @@ export async function onRequestPost({ request, env }) {
     const modelName = env.CUSTOM_MODEL || 'deepseek-chat';
     
     if (!apiKey) {
-      console.error('[ERROR] API密钥未配置');
+      console.log(`[ERROR] No API key configured`);
       return new Response(JSON.stringify({ error: 'API密钥未配置' }), { status: 500, headers });
     }
 
-    // 记录 API 调用 (不含密钥)
-    console.log(`[API] Calling ${apiUrl} with model ${modelName}, days: ${days}`);
+    console.log(`[REQUEST] IP: ${clientIP}, Days: ${days}, Style: ${styles}`);
     
+    const startTime = Date.now();
     const response = await fetch(apiUrl, {
       method: 'POST',
       headers: {
@@ -149,9 +165,12 @@ export async function onRequestPost({ request, env }) {
       }),
     });
 
+    const duration = Date.now() - startTime;
+    console.log(`[API] Status: ${response.status}, Duration: ${duration}ms`);
+
     if (!response.ok) {
       const errorText = await response.text();
-      console.error(`[API ERROR] ${response.status}: ${errorText.substring(0, 200)}`);
+      console.log(`[API ERROR] ${response.status}: ${errorText}`);
       const errMsg = 'API错误: ' + response.status;
       return new Response(JSON.stringify({ error: errMsg }), {
         status: 500,
@@ -181,13 +200,11 @@ export async function onRequestPost({ request, env }) {
     }
     
     const result = JSON.parse(jsonStr);
-    
-    // 记录成功调用
-    console.log(`[API SUCCESS] Generated ${days} days of meals`);
+    console.log(`[SUCCESS] Generated ${days} days plan`);
     
     return new Response(JSON.stringify(result), { headers });
   } catch (error) {
-    console.error(`[ERROR] ${error.message}`);
+    console.log(`[ERROR] ${error.message}`);
     const errMsg = '生成失败: ' + error.message;
     return new Response(JSON.stringify({ error: errMsg }), {
       status: 500,
