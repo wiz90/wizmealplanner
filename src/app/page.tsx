@@ -93,7 +93,6 @@ export default function Home() {
   const [selectedDay, setSelectedDay] = useState(1);
   const [checked, setChecked] = useState<Record<string, boolean>>({});
   const [toast, setToast] = useState('');
-  const [weekPlan, setWeekPlan] = useState<any>(null);
 
   useEffect(() => {
     const p = localStorage.getItem('meal_profile');
@@ -121,16 +120,6 @@ export default function Home() {
       return () => clearInterval(t);
     }
   }, [loading]);
-
-  // 当切换到周视图时加载数据
-  useEffect(() => {
-    if (page === 7 && !weekPlan) {
-      const saved = localStorage.getItem('week_plan');
-      if (saved) {
-        try { setWeekPlan(JSON.parse(saved)); } catch (e) {}
-      }
-    }
-  }, [page, weekPlan]);
 
   const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(''), 2000); };
   const toggle = (arr: string[], v: string) => arr.includes(v) ? arr.filter(x => x !== v) : [...arr, v];
@@ -422,11 +411,6 @@ const generateLocalPlan = () => {
               ⭐ 我的收藏 ({favorites.length})
             </button>
             {hasProfile && (
-              <button onClick={() => setPage(7)} className="w-full py-3 bg-green-100 text-green-700 rounded-xl font-medium">
-                📅 周菜单视图
-              </button>
-            )}
-            {hasProfile && (
               <button onClick={() => setPage(2)} className="w-full py-4 bg-white text-gray-700 rounded-2xl font-semibold border-2 border-gray-200">
                 ✨ 新建规划
               </button>
@@ -485,24 +469,33 @@ const generateLocalPlan = () => {
             {/* 不爱吃 - 简化样式 */}
             <div>
               <h3 className="font-semibold text-gray-900 mb-3">🤔 不爱吃</h3>
-              {/* 预设 - 点击切换: 一点不吃 -> 少吃 -> 移除 */}
-              <div className="flex flex-wrap gap-2">{DISLIKE_OPTIONS.map(d => {
-                const existing = dislikes.find(x => x.item === d.value);
-                return (
-                  <button key={d.value} onClick={() => {
-                    if (!existing) {
-                      setDislikes([...dislikes, { item: d.value, level: '一点不吃' }]);
-                    } else if (existing.level === '一点不吃') {
-                      setDislikes(dislikes.map(x => x.item === d.value ? { ...x, level: '少吃' } : x));
-                    } else {
-                      removeDislike(d.value);
-                    }
-                  }}
-                  className={`px-3 py-1.5 rounded-full text-sm ${existing ? (existing.level === '少吃' ? 'bg-yellow-500 text-white' : 'bg-orange-500 text-white') : 'bg-gray-100 text-gray-700'}`}>
-                    {existing ? (existing.level === '少吃' ? '🤔 少吃' : '🚫 一点不吃') : d.emoji} {d.value}
+              {/* 预设 + 自定义 - 统一展示 */}
+              <div className="flex flex-wrap gap-2">
+                {DISLIKE_OPTIONS.map(d => {
+                  const existing = dislikes.find(x => x.item === d.value);
+                  return (
+                    <button key={d.value} onClick={() => {
+                      if (!existing) {
+                        setDislikes([...dislikes, { item: d.value, level: '一点不吃' }]);
+                      } else if (existing.level === '一点不吃') {
+                        setDislikes(dislikes.map(x => x.item === d.value ? { ...x, level: '少吃' } : x));
+                      } else {
+                        removeDislike(d.value);
+                      }
+                    }}
+                    className={`px-3 py-1.5 rounded-full text-sm ${existing ? (existing.level === '少吃' ? 'bg-yellow-500 text-white' : 'bg-orange-500 text-white') : 'bg-gray-100 text-gray-700'}`}>
+                      {existing ? (existing.level === '少吃' ? '🤔 少吃' : '🚫 一点不吃') : d.emoji} {d.value}
+                    </button>
+                  );
+                })}
+                {/* 自定义不爱吃 - 也显示在这里 */}
+                {dislikes.filter(d => !DISLIKE_OPTIONS.find(o => o.value === d.item)).map(d => (
+                  <button key={d.item} onClick={() => removeDislike(d.item)}
+                    className={`px-3 py-1.5 rounded-full text-sm ${d.level === '少吃' ? 'bg-yellow-500 text-white' : 'bg-orange-500 text-white'}`}>
+                    {d.level === '少吃' ? '🤔 少吃' : '🚫 一点不吃'} {d.item} ✕
                   </button>
-                );
-              })}</div>
+                ))}
+              </div>
               {/* DIY */}
               <div className="flex gap-2 mt-3">
                 <input value={newDislike} onChange={e => setNewDislike(e.target.value)} placeholder="添加不爱吃的..." className="flex-1 px-3 py-2 border rounded-lg text-sm text-gray-900" onKeyDown={e => e.key === 'Enter' && addDislike()} />
@@ -899,109 +892,6 @@ if (page === 6) {
 }
 
 // ========== 周菜单视图 ==========
-if (page === 7) {
-  const weekDays = ['周一', '周二', '周三', '周四', '周五', '周六', '周日'];
-  const mealTypes = ['早餐', '午餐', '晚餐'];
-  
-  const generateWeekPlan = async () => {
-    setLoading(true);
-    try {
-      const response = await fetch('/api/generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          profile: { goals, restrictions: [...restrictions, ...customRestrictions], kitchen_tools: kitchen },
-          session: { 
-            style_preferences: style, 
-            meals_per_day: mealTypes,
-            days: 7,
-            person_count: Number(people) || 2,
-            budget: budget,
-            soft_dislikes: dislikes.map(d => d.item)
-          }
-        })
-      });
-      const data = await response.json();
-      setWeekPlan(data);
-      localStorage.setItem('week_plan', JSON.stringify(data));
-      setToast('周菜单生成成功');
-      setTimeout(() => setToast(''), 2000);
-    } catch (e) {
-      setError('生成失败，请重试');
-    } finally {
-      setLoading(false);
-    }
-  };
-  
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-orange-50 to-amber-50 py-8">
-      <div className="max-w-4xl mx-auto px-4">
-        <div className="bg-white rounded-2xl shadow-lg p-6">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-xl font-bold text-gray-900">📅 周菜单视图</h2>
-            <button onClick={() => setPage(0)} className="text-blue-500 text-sm">← 返回</button>
-          </div>
-          
-          {!weekPlan ? (
-            <div className="text-center py-12">
-              <div className="text-gray-500 mb-4">还没有周菜单计划</div>
-              <button onClick={generateWeekPlan} className="px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-xl font-semibold">
-                🚀 一键生成整周菜单
-              </button>
-            </div>
-          ) : (
-            <div>
-              {/* 周菜单网格 */}
-              <div className="overflow-x-auto">
-                <table className="w-full border-collapse">
-                  <thead>
-                    <tr>
-                      <th className="p-3 border bg-gray-50 text-left text-gray-700">时间</th>
-                      {weekDays.map(day => (
-                        <th key={day} className="p-3 border bg-gray-50 text-center text-gray-700">{day}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {mealTypes.map(meal => (
-                      <tr key={meal}>
-                        <td className="p-3 border bg-gray-50 font-medium text-gray-700">{meal}</td>
-                        {weekDays.map((day, dayIdx) => {
-                          const dayPlan = weekPlan.days?.[dayIdx];
-                          const mealPlan = dayPlan?.meals?.find((m: any) => m.type === meal);
-                          return (
-                            <td key={`${day}-${meal}`} className="p-3 border min-w-[150px]">
-                              {mealPlan?.dishes?.map((dish: any, idx: number) => (
-                                <div key={idx} className="mb-1 text-sm">
-                                  <div className="font-medium">{dish.recipe?.recipe_name}</div>
-                                  <div className="text-xs text-gray-500">{dish.recipe?.time_cost}分钟</div>
-                                </div>
-                              )) || <div className="text-gray-400 text-sm">未安排</div>}
-                            </td>
-                          );
-                        })}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              
-              <div className="flex gap-3 mt-6">
-                <button onClick={generateWeekPlan} className="flex-1 py-3 bg-blue-500 text-white rounded-xl font-semibold">
-                  🔄 重新生成
-                </button>
-                <button onClick={() => setPage(4)} className="flex-1 py-3 bg-green-500 text-white rounded-xl font-semibold">
-                  📦 查看备菜清单
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
 // 菜品卡片组件 - 可展开做法
 function DishCard({ dish, onReplace, onFavorite }: { dish: any, onReplace: () => void, onFavorite: () => void }) {
   const [expanded, setExpanded] = useState(false);
