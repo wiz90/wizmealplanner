@@ -893,11 +893,13 @@ if (page === 7) {
   const weekDays = ['周一', '周二', '周三', '周四', '周五', '周六', '周日'];
   const mealTypes = ['早餐', '午餐', '晚餐'];
   
-  // 加载周计划数据
+  // 页面加载时读取存储的周计划
   useEffect(() => {
-    const saved = localStorage.getItem('week_plan');
-    if (saved) {
-      try { setWeekPlan(JSON.parse(saved)); } catch (e) {}
+    if (!weekPlan) {
+      const saved = localStorage.getItem('week_plan');
+      if (saved) {
+        try { setWeekPlan(JSON.parse(saved)); } catch (e) {}
+      }
     }
   }, []);
   
