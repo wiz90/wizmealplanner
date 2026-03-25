@@ -93,6 +93,7 @@ export default function Home() {
   const [selectedDay, setSelectedDay] = useState(1);
   const [checked, setChecked] = useState<Record<string, boolean>>({});
   const [toast, setToast] = useState('');
+  const [weekPlan, setWeekPlan] = useState<any>(null);
 
   useEffect(() => {
     const p = localStorage.getItem('meal_profile');
@@ -893,8 +894,6 @@ if (page === 7) {
   const mealTypes = ['早餐', '午餐', '晚餐'];
   
   // 加载周计划数据
-  const [weekPlan, setWeekPlan] = useState<any>(null);
-  
   useEffect(() => {
     const saved = localStorage.getItem('week_plan');
     if (saved) {
