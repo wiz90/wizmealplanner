@@ -8,14 +8,28 @@ const GOAL_OPTIONS = [
   { value: '制作简单', emoji: '⚡' }, { value: '便当', emoji: '🍱' }, { value: '替代外卖', emoji: '🍔' }, { value: '清淡', emoji: '🥗' },
 ];
 const RESTRICTION_OPTIONS = ['海鲜', '牛肉', '猪肉', '鸡肉', '奶制品', '坚果', '麸质', '酒精', '生冷', '辣'];
-const DISLIKE_OPTIONS = [{ value: '香菜', emoji: '🌿' }, { value: '内脏', emoji: '🫀' }, { value: '胡萝卜', emoji: '🥕' }, { value: '茄子', emoji: '🍆' }, { value: '青椒', emoji: '🫑' }, { value: '苦瓜', emoji: '🤢' }, { value: '香菇', emoji: '🍄' }, { value: '腐竹', emoji: '🧈' }];
+const DISLIKE_OPTIONS = [
+  { value: '香菜', emoji: '🌿' }, { value: '内脏', emoji: '🫀' }, { value: '胡萝卜', emoji: '🥕' }, 
+  { value: '茄子', emoji: '🍆' }, { value: '青椒', emoji: '🫑' }, { value: '苦瓜', emoji: '🤢' }, 
+  { value: '香菇', emoji: '🍄' }, { value: '腐竹', emoji: '🧈' }, { value: '洋葱', emoji: '🧅' },
+  { value: '芹菜', emoji: '🥬' }, { value: '番茄', emoji: '🍅' }, { value: '土豆', emoji: '🥔' },
+  { value: '南瓜', emoji: '🎃' }, { value: '花菜', emoji: '🥦' }, { value: '豆角', emoji: '🫘' },
+];
 const KITCHEN_OPTIONS = [{ value: '炒锅', emoji: '🍳' }, { value: '平底锅', emoji: '🍳' }, { value: '电饭锅', emoji: '🍚' }, { value: '空气炸锅', emoji: '🍟' }, { value: '微波炉', emoji: '📻' }, { value: '烤箱', emoji: '🥖' }, { value: '电压力锅', emoji: '🥘' }, { value: '汤锅', emoji: '🍲' }, { value: '蒸锅', emoji: '🥟' }];
 const STYLE_OPTIONS = [
-  { value: '家常中餐', emoji: '🥢' }, { value: '地中海', emoji: '🫒' }, { value: '轻食', emoji: '🥗' }, 
-  { value: '日式', emoji: '🍣' }, { value: '韩式', emoji: '🥘' }, { value: '东南亚', emoji: '🍜' }, 
-  { value: '高蛋白', emoji: '🥩' }, { value: '川味', emoji: '🌶️' }, { value: '粤菜', emoji: '🦐' },
-  { value: '素食', emoji: '🥬' }, { value: '西式', emoji: '🍝' }, { value: '创意菜', emoji: '✨' },
-  { value: '沙拉轻食', emoji: '🥗' },
+  // 中式家常
+  { value: '家常小炒', emoji: '🍳' }, { value: '湘菜', emoji: '🌶️' }, { value: '川菜', emoji: '🔥' }, 
+  { value: '粤菜', emoji: '🦐' }, { value: '闽菜', emoji: '🐟' },
+  // 日韩
+  { value: '日式', emoji: '🍣' }, { value: '韩式', emoji: '🥘' },
+  // 东南亚
+  { value: '东南亚', emoji: '🍜' },
+  // 西式
+  { value: '西式简餐', emoji: '🍝' }, { value: '意式', emoji: '🍕' },
+  // 轻食/素
+  { value: '轻食沙拉', emoji: '🥗' }, { value: '素食', emoji: '🥬' },
+  // 创意
+  { value: '创意融合', emoji: '✨' },
 ];
 const MEAL_OPTIONS = [{ value: '早餐', emoji: '🌅' }, { value: '上午茶', emoji: '☕' }, { value: '午餐', emoji: '☀️' }, { value: '下午茶', emoji: '🍰' }, { value: '晚餐', emoji: '🌙' }];
 const DISLIKE_LEVELS = [
@@ -396,6 +410,11 @@ const generateLocalPlan = () => {
             <button onClick={() => setPage(6)} className="w-full py-3 bg-amber-100 text-amber-700 rounded-xl font-medium">
               ⭐ 我的收藏 ({favorites.length})
             </button>
+            {hasProfile && (
+              <button onClick={() => setPage(7)} className="w-full py-3 bg-green-100 text-green-700 rounded-xl font-medium">
+                📅 周菜单视图
+              </button>
+            )}
             {hasProfile && (
               <button onClick={() => setPage(2)} className="w-full py-4 bg-white text-gray-700 rounded-2xl font-semibold border-2 border-gray-200">
                 ✨ 新建规划
@@ -860,6 +879,120 @@ if (page === 6) {
                   </div>
                 </div>
               ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ========== 周菜单视图 ==========
+if (page === 7) {
+  const weekDays = ['周一', '周二', '周三', '周四', '周五', '周六', '周日'];
+  const mealTypes = ['早餐', '午餐', '晚餐'];
+  
+  // 加载周计划数据
+  const [weekPlan, setWeekPlan] = useState<any>(null);
+  
+  useEffect(() => {
+    const saved = localStorage.getItem('week_plan');
+    if (saved) {
+      try { setWeekPlan(JSON.parse(saved)); } catch (e) {}
+    }
+  }, []);
+  
+  const generateWeekPlan = async () => {
+    setLoading(true);
+    try {
+      const response = await fetch('/api/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          profile: { goals, restrictions: [...restrictions, ...customRestrictions], kitchen_tools: kitchen },
+          session: { 
+            style_preferences: style, 
+            meals_per_day: mealTypes,
+            days: 7,
+            person_count: Number(people) || 2,
+            budget: budget,
+            soft_dislikes: dislikes.map(d => d.item)
+          }
+        })
+      });
+      const data = await response.json();
+      setWeekPlan(data);
+      localStorage.setItem('week_plan', JSON.stringify(data));
+      setToast('周菜单生成成功');
+      setTimeout(() => setToast(''), 2000);
+    } catch (e) {
+      setError('生成失败，请重试');
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-orange-50 to-amber-50 py-8">
+      <div className="max-w-4xl mx-auto px-4">
+        <div className="bg-white rounded-2xl shadow-lg p-6">
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-xl font-bold text-gray-900">📅 周菜单视图</h2>
+            <button onClick={() => setPage(0)} className="text-blue-500 text-sm">← 返回</button>
+          </div>
+          
+          {!weekPlan ? (
+            <div className="text-center py-12">
+              <div className="text-gray-500 mb-4">还没有周菜单计划</div>
+              <button onClick={generateWeekPlan} className="px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-xl font-semibold">
+                🚀 一键生成整周菜单
+              </button>
+            </div>
+          ) : (
+            <div>
+              {/* 周菜单网格 */}
+              <div className="overflow-x-auto">
+                <table className="w-full border-collapse">
+                  <thead>
+                    <tr>
+                      <th className="p-3 border bg-gray-50 text-left text-gray-700">时间</th>
+                      {weekDays.map(day => (
+                        <th key={day} className="p-3 border bg-gray-50 text-center text-gray-700">{day}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {mealTypes.map(meal => (
+                      <tr key={meal}>
+                        <td className="p-3 border bg-gray-50 font-medium text-gray-700">{meal}</td>
+                        {weekDays.map((day, dayIdx) => {
+                          const dayPlan = weekPlan.days?.[dayIdx];
+                          const mealPlan = dayPlan?.meals?.find((m: any) => m.type === meal);
+                          return (
+                            <td key={`${day}-${meal}`} className="p-3 border min-w-[150px]">
+                              {mealPlan?.dishes?.map((dish: any, idx: number) => (
+                                <div key={idx} className="mb-1 text-sm">
+                                  <div className="font-medium">{dish.recipe?.recipe_name}</div>
+                                  <div className="text-xs text-gray-500">{dish.recipe?.time_cost}分钟</div>
+                                </div>
+                              )) || <div className="text-gray-400 text-sm">未安排</div>}
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              
+              <div className="flex gap-3 mt-6">
+                <button onClick={generateWeekPlan} className="flex-1 py-3 bg-blue-500 text-white rounded-xl font-semibold">
+                  🔄 重新生成
+                </button>
+                <button onClick={() => setPage(4)} className="flex-1 py-3 bg-green-500 text-white rounded-xl font-semibold">
+                  📦 查看备菜清单
+                </button>
+              </div>
             </div>
           )}
         </div>
