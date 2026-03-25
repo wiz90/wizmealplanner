@@ -93,6 +93,7 @@ export default function Home() {
   const [result, setResult] = useState<any>(null);
   const [error, setError] = useState('');
   const [selectedDay, setSelectedDay] = useState(1);
+  const [historyDetail, setHistoryDetail] = useState<any>(null);
   const [checked, setChecked] = useState<Record<string, boolean>>({});
   const [toast, setToast] = useState('');
 
@@ -761,8 +762,66 @@ if (page === 4) {
 }
 
 // ========== 历史记录页 ==========
+// ========== 历史记录页 ==========
 if (page === 5) {
-  const history = JSON.parse(localStorage.getItem('meal_history') || '[]');
+  const history = JSON.parse(localStorage.getItem('meal_history') || '[]').reverse();
+  
+  // 查看详情
+  
+  // 删除记录
+  const deleteHistory = (idx: number) => {
+    const allHistory = JSON.parse(localStorage.getItem('meal_history') || '[]');
+    allHistory.splice(allHistory.length - 1 - idx, 1); // reverse后再删除对应位置
+    localStorage.setItem('meal_history', JSON.stringify(allHistory));
+    setToast('已删除');
+    setTimeout(() => setToast(''), 2000);
+  };
+  
+  // 清空全部
+  const clearAllHistory = () => {
+    if (confirm('确定清空所有历史记录?')) {
+      localStorage.setItem('meal_history', '[]');
+      setToast('已清空');
+      setTimeout(() => setToast(''), 2000);
+    }
+  };
+  
+  if (historyDetail) {
+    // 详情页
+    const totalDays = historyDetail.days?.length || 0;
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-orange-50 to-amber-50 py-8">
+        <div className="max-w-xl mx-auto px-4">
+          <div className="bg-white rounded-2xl shadow-lg p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold text-gray-900">📜 历史详情</h2>
+              <button onClick={() => setHistoryDetail(null)} className="text-blue-500 text-sm">← 返回</button>
+            </div>
+            
+            <div className="text-sm text-gray-600 mb-4">
+              {historyDetail.style?.join('、')} | {totalDays}天 | {historyDetail.date}
+            </div>
+            
+            <div className="space-y-4">
+              {historyDetail.days?.map((day: any, dayIdx: number) => (
+                <div key={dayIdx} className="p-4 border rounded-xl">
+                  <div className="font-semibold text-gray-800 mb-2">第{dayIdx + 1}天</div>
+                  {day.meals?.map((meal: any, mealIdx: number) => (
+                    <div key={mealIdx} className="mb-2">
+                      <div className="text-sm font-medium text-gray-700">{meal.type}</div>
+                      {meal.dishes?.map((dish: any, dIdx: number) => (
+                        <div key={dIdx} className="text-sm text-gray-600 ml-2">• {dish.recipe?.recipe_name}</div>
+                      ))}
+                    </div>
+                  ))}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
   
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 to-amber-50 py-8">
@@ -776,13 +835,23 @@ if (page === 5) {
           {history.length === 0 ? (
             <div className="text-center text-gray-500 py-8">暂无历史记录</div>
           ) : (
-            <div className="space-y-3">
-              {history.map((item: any, idx: number) => (
-                <div key={idx} className="p-4 border rounded-xl">
-                  <div className="text-sm font-medium text-gray-800">{item.style?.join('、')}</div>
-                  <div className="text-xs text-gray-500 mt-1">{Number(item.days)}天 | {item.date}</div>
-                </div>
-              ))}
+            <div>
+              <div className="flex justify-end mb-3">
+                <button onClick={clearAllHistory} className="text-xs text-red-500">清空全部</button>
+              </div>
+              <div className="space-y-3">
+                {history.map((item: any, idx: number) => (
+                  <div key={idx} className="p-4 border rounded-xl">
+                    <div className="flex justify-between items-start">
+                      <div className="flex-1" onClick={() => setHistoryDetail(item)}>
+                        <div className="text-sm font-medium text-gray-800">{item.style?.join('、')}</div>
+                        <div className="text-xs text-gray-500 mt-1">{Number(item.days)}天 | {item.person_count}人 | {item.date}</div>
+                      </div>
+                      <button onClick={() => deleteHistory(idx)} className="text-red-500 text-xs ml-2">删除</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
         </div>
@@ -791,7 +860,6 @@ if (page === 5) {
   );
 }
 
-// ========== 收藏夹页 ==========
 // 菜品卡片组件 - 可展开做法
 function DishCard({ dish, onReplace }: { dish: any, onReplace: () => void }) {
   const [expanded, setExpanded] = useState(false);
