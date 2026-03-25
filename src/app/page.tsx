@@ -122,6 +122,16 @@ export default function Home() {
     }
   }, [loading]);
 
+  // 当切换到周视图时加载数据
+  useEffect(() => {
+    if (page === 7 && !weekPlan) {
+      const saved = localStorage.getItem('week_plan');
+      if (saved) {
+        try { setWeekPlan(JSON.parse(saved)); } catch (e) {}
+      }
+    }
+  }, [page, weekPlan]);
+
   const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(''), 2000); };
   const toggle = (arr: string[], v: string) => arr.includes(v) ? arr.filter(x => x !== v) : [...arr, v];
 
@@ -892,16 +902,6 @@ if (page === 6) {
 if (page === 7) {
   const weekDays = ['周一', '周二', '周三', '周四', '周五', '周六', '周日'];
   const mealTypes = ['早餐', '午餐', '晚餐'];
-  
-  // 页面加载时读取存储的周计划
-  useEffect(() => {
-    if (!weekPlan) {
-      const saved = localStorage.getItem('week_plan');
-      if (saved) {
-        try { setWeekPlan(JSON.parse(saved)); } catch (e) {}
-      }
-    }
-  }, []);
   
   const generateWeekPlan = async () => {
     setLoading(true);
