@@ -63,6 +63,11 @@ export default function Home() {
   const [newDislike, setNewDislike] = useState('');
   const [newDislikeLevel, setNewDislikeLevel] = useState('一点不吃');
   const [style, setStyle] = useState<string[]>([]);
+  
+  // 收藏夹
+  const [favorites, setFavorites] = useState<any[]>([]);
+  const [favoriteCategory, setFavoriteCategory] = useState('常做');
+  const [favoriteTags, setFavoriteTags] = useState<string[]>([]);
   const [days, setDays] = useState(3);
   const [people, setPeople] = useState(2);
   const [meals, setMeals] = useState<string[]>(['早餐', '午餐', '晚餐']);
@@ -78,12 +83,19 @@ export default function Home() {
   useEffect(() => {
     const p = localStorage.getItem('meal_profile');
     if (p) {
-      const d = JSON.parse(p);
-      setGoals(d.goals || []);
-      setRestrictions(d.restrictions || []);
-      setCustomRestrictions(d.customRestrictions || []);
-      setKitchen(d.kitchen || []);
-      setDislikes(d.dislikes || []);
+      try {
+        const d = JSON.parse(p);
+        setGoals(d.goals || []);
+        setRestrictions(d.restrictions || []);
+        setCustomRestrictions(d.customRestrictions || []);
+        setKitchen(d.kitchen || []);
+        setDislikes(d.dislikes || []);
+      } catch (e) { console.error('Parse error', e); }
+    }
+    // 加载收藏夹
+    const f = localStorage.getItem('meal_favorites');
+    if (f) {
+      try { setFavorites(JSON.parse(f)); } catch (e) {}
     }
   }, []);
 
@@ -351,6 +363,9 @@ const generateLocalPlan = () => {
             <button onClick={() => setPage(hasProfile ? 2 : 1)} className="w-full py-4 bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-2xl font-semibold text-lg shadow-lg">
               {hasProfile ? '🎯 开始规划' : '📝 填写档案'}
             </button>
+            <button onClick={() => setPage(6)} className="w-full py-3 bg-amber-100 text-amber-700 rounded-xl font-medium">
+              ⭐ 我的收藏 ({favorites.length})
+            </button>
             {hasProfile && (
               <button onClick={() => setPage(2)} className="w-full py-4 bg-white text-gray-700 rounded-2xl font-semibold border-2 border-gray-200">
                 ✨ 新建规划
@@ -569,9 +584,25 @@ const generateLocalPlan = () => {
           {!loading && result && currentDayMeals.map((m: any, mealIdx: number) => (
             <div key={mealIdx} className="mb-4 p-4 border rounded-xl">
               <div className="font-semibold text-gray-900 mb-3">{m.type}</div>
-              {m.dishes?.map((dish: any, dishIdx: number) => (
-                <DishCard key={dishIdx} dish={dish} onReplace={() => replaceDish(selectedDay - 1, mealIdx, dishIdx)} />
-              ))}
+              {m.dishes?.map((dish: any, dishIdx: number) => {
+                const addToFavs = () => {
+                  const newFav = {
+                    id: Date.now().toString(),
+                    recipe: dish.recipe,
+                    category: '常做',
+                    tags: dish.recipe?.tags || [],
+                    createdAt: new Date().toISOString().split('T')[0]
+                  };
+                  const updated = [...favorites, newFav];
+                  setFavorites(updated);
+                  localStorage.setItem('meal_favorites', JSON.stringify(updated));
+                  setToast('已收藏: ' + dish.recipe?.recipe_name);
+                  setTimeout(() => setToast(''), 2000);
+                };
+                return (
+                  <DishCard key={dishIdx} dish={dish} onReplace={() => replaceDish(selectedDay - 1, mealIdx, dishIdx)} onFavorite={addToFavs} />
+                );
+              })}
             </div>
           ))}
 
@@ -719,8 +750,96 @@ if (page === 5) {
   );
 }
 
+// ========== 收藏夹页 ==========
+if (page === 6) {
+  const categories = ['常做', '快手', '待尝试'];
+  
+  const addToFavorites = (recipe: any, category: string, tags: string[]) => {
+    const newFav = {
+      id: Date.now().toString(),
+      recipe,
+      category,
+      tags,
+      createdAt: new Date().toISOString().split('T')[0]
+    };
+    const updated = [...favorites, newFav];
+    setFavorites(updated);
+    localStorage.setItem('meal_favorites', JSON.stringify(updated));
+    setToast('已添加到收藏夹');
+    setTimeout(() => setToast(''), 2000);
+  };
+  
+  const removeFavorite = (id: string) => {
+    const updated = favorites.filter(f => f.id !== id);
+    setFavorites(updated);
+    localStorage.setItem('meal_favorites', JSON.stringify(updated));
+    setToast('已移除收藏');
+    setTimeout(() => setToast(''), 2000);
+  };
+  
+  const filteredFavorites = favorites.filter(f => 
+    favoriteCategory === '全部' || f.category === favoriteCategory
+  );
+  
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-orange-50 to-amber-50 py-8">
+      <div className="max-w-xl mx-auto px-4">
+        <div className="bg-white rounded-2xl shadow-lg p-6">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-xl font-bold text-gray-900">⭐ 我的收藏</h2>
+            <button onClick={() => setPage(0)} className="text-blue-500 text-sm">← 返回</button>
+          </div>
+          
+          {/* 分类筛选 */}
+          <div className="flex gap-2 mb-4">
+            {['全部', ...categories].map(cat => (
+              <button key={cat} onClick={() => setFavoriteCategory(cat)}
+                className={`px-3 py-1 rounded-full text-sm ${favoriteCategory === cat ? 'bg-amber-500 text-white' : 'bg-gray-100 text-gray-700'}`}>
+                {cat}
+              </button>
+            ))}
+          </div>
+          
+          {filteredFavorites.length === 0 ? (
+            <div className="text-center text-gray-500 py-8">
+              {favoriteCategory === '全部' ? '暂无收藏' : `暂无${favoriteCategory}的收藏`}
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {filteredFavorites.map((fav: any) => (
+                <div key={fav.id} className="p-4 border rounded-xl">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <div className="font-medium text-gray-800">{fav.recipe.recipe_name}</div>
+                      <div className="text-xs text-gray-500 mt-1">
+                        {fav.category} • {fav.createdAt}
+                      </div>
+                      {fav.tags.length > 0 && (
+                        <div className="flex gap-1 mt-2">
+                          {fav.tags.map((tag: string) => (
+                            <span key={tag} className="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs rounded-full">
+                              {tag}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    <button onClick={() => removeFavorite(fav.id)} className="text-red-500 text-sm">
+                      移除
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // 菜品卡片组件 - 可展开做法
-function DishCard({ dish, onReplace }: { dish: any, onReplace: () => void }) {
+function DishCard({ dish, onReplace, onFavorite }: { dish: any, onReplace: () => void, onFavorite: () => void }) {
   const [expanded, setExpanded] = useState(false);
   const dishType = dish.dish_type || '菜品';
   
@@ -742,7 +861,12 @@ function DishCard({ dish, onReplace }: { dish: any, onReplace: () => void }) {
           </div>
           <div className="text-xs text-gray-500">⏱️ {dish.recipe?.time_cost}分钟</div>
         </div>
-        <button onClick={onReplace} className="text-xs text-blue-500 ml-2">换一道</button>
+        <div className="flex gap-2">
+          <button onClick={onFavorite} className="text-xs text-amber-500" title="收藏">
+            ⭐
+          </button>
+          <button onClick={onReplace} className="text-xs text-blue-500">换一道</button>
+        </div>
       </div>
       
       {/* 做法 - 可展开 */}
