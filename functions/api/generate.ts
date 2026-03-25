@@ -148,7 +148,26 @@ export async function onRequestPost({ request, env }) {
       return new Response(JSON.stringify({ error: 'API密钥未配置' }), { status: 500, headers });
     }
 
-    console.log(`[REQUEST] IP: ${clientIP}, Days: ${days}, Style: ${styles}`);
+    // 判断是否为 MiniMax API
+    const isMiniMax = apiUrl.includes('minimax');
+    
+    // MiniMax 请求格式
+    const apiBody = isMiniMax ? {
+      model: modelName,
+      messages: [
+        { role: 'system', content: '你是一个专业的食谱规划师，只返回JSON。' },
+        { role: 'user', content: prompt }
+      ],
+      temperature: 0.7,
+      max_tokens: 4000,
+    } : {
+      model: modelName,
+      messages: [{ role: 'user', content: prompt }],
+      temperature: 0.7,
+      max_tokens: 4000,
+    };
+    
+    console.log(`[REQUEST] IP: ${clientIP}, Days: ${days}, Model: ${modelName}, API: ${isMiniMax ? 'MiniMax' : 'DeepSeek'}`);
     
     const startTime = Date.now();
     const response = await fetch(apiUrl, {
@@ -157,12 +176,7 @@ export async function onRequestPost({ request, env }) {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer ' + apiKey,
       },
-      body: JSON.stringify({
-        model: modelName,
-        messages: [{ role: 'user', content: prompt }],
-        temperature: 0.7,
-        max_tokens: 4000,
-      }),
+      body: JSON.stringify(apiBody),
     });
 
     const duration = Date.now() - startTime;
