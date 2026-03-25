@@ -79,7 +79,7 @@ export async function onRequestPost({ request, env }) {
       .map(sanitizeInput).filter(Boolean).join('、') || '无';
     const dislikes = (session.soft_dislikes || []).map(sanitizeInput).filter(Boolean).join('、') || '无';
     const goals = (profile.goals || []).map(sanitizeInput).filter(Boolean).join('、') || '健康';
-    const isSimple = goals.includes('制作简单');
+    const isSimple = goals.includes('制作简单') || session.simple_prep === true;
     const kitchenTools = (profile.kitchen_tools || []).map(sanitizeInput).filter(Boolean).join('、') || '无';
     const styles = (session.style_preferences || []).map(sanitizeInput).filter(Boolean).join('、') || '家常中餐';
     const meals = (session.meals_per_day || []).map(sanitizeInput).filter(Boolean).join('、') || '早餐、午餐、晚餐';

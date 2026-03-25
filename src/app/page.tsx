@@ -17,21 +17,19 @@ const DISLIKE_OPTIONS = [
 ];
 const KITCHEN_OPTIONS = [{ value: '炒锅', emoji: '🍳' }, { value: '平底锅', emoji: '🍳' }, { value: '电饭锅', emoji: '🍚' }, { value: '空气炸锅', emoji: '🍟' }, { value: '微波炉', emoji: '📻' }, { value: '烤箱', emoji: '🥖' }, { value: '电压力锅', emoji: '🥘' }, { value: '汤锅', emoji: '🍲' }, { value: '蒸锅', emoji: '🥟' }];
 const STYLE_OPTIONS = [
-  // 中式家常
-  { value: '家常小炒', emoji: '🍳' }, { value: '湘菜', emoji: '🌶️' }, { value: '川菜', emoji: '🔥' }, 
-  { value: '粤菜', emoji: '🦐' }, { value: '闽菜', emoji: '🐟' },
+  // 中式
+  { value: '家常小炒', emoji: '🍳' }, { value: '川菜', emoji: '🔥' }, { value: '湘菜', emoji: '🌶️' }, 
+  { value: '粤菜', emoji: '🦐' }, { value: '闽菜', emoji: '🐟' }, { value: '东北菜', emoji: '🥘' }, { value: '清真', emoji: '🐄' },
   // 日韩
   { value: '日式', emoji: '🍣' }, { value: '韩式', emoji: '🥘' },
   // 东南亚
-  { value: '东南亚', emoji: '🍜' },
+  { value: '泰式', emoji: '🥭' }, { value: '越南', emoji: '🍜' },
   // 西式
-  { value: '西式简餐', emoji: '🍝' }, { value: '意式', emoji: '🍕' },
+  { value: '意式', emoji: '🍕' }, { value: '西式简餐', emoji: '🥩' },
   // 健康轻食
   { value: '轻食沙拉', emoji: '🥗' }, { value: 'Wagas风格', emoji: '🥬' },
-  // 素食
+  // 其他
   { value: '素食', emoji: '🥬' },
-  // 创意
-  { value: '创意融合', emoji: '✨' },
 ];
 const MEAL_OPTIONS = [{ value: '早餐', emoji: '🌅' }, { value: '上午茶', emoji: '☕' }, { value: '午餐', emoji: '☀️' }, { value: '下午茶', emoji: '🍰' }, { value: '晚餐', emoji: '🌙' }];
 const DISLIKE_LEVELS = [
@@ -85,11 +83,8 @@ export default function Home() {
   const [newDislikeLevel, setNewDislikeLevel] = useState('一点不吃');
   const [style, setStyle] = useState<string[]>([]);
   
-  // 收藏夹
-  const [favorites, setFavorites] = useState<any[]>([]);
-  const [favoriteCategory, setFavoriteCategory] = useState('常做');
-  const [favoriteTags, setFavoriteTags] = useState<string[]>([]);
   const [days, setDays] = useState(3);
+  const [simplePrep, setSimplePrep] = useState(false);
   const [people, setPeople] = useState(2);
   const [meals, setMeals] = useState<string[]>(['早餐', '午餐', '晚餐']);
   const [budget, setBudget] = useState('无限制');
@@ -112,11 +107,6 @@ export default function Home() {
         setKitchen(d.kitchen || []);
         setDislikes(d.dislikes || []);
       } catch (e) { console.error('Parse error', e); }
-    }
-    // 加载收藏夹
-    const f = localStorage.getItem('meal_favorites');
-    if (f) {
-      try { setFavorites(JSON.parse(f)); } catch (e) {}
     }
   }, []);
 
@@ -268,7 +258,8 @@ const generateLocalPlan = () => {
             days, 
             meals_per_day: meals, 
             person_count: people, 
-            budget 
+            budget,
+            simple_prep: simplePrep
           }
         })
       });
@@ -413,9 +404,6 @@ const generateLocalPlan = () => {
           <div className="space-y-4">
             <button onClick={() => setPage(hasProfile ? 2 : 1)} className="w-full py-4 bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-2xl font-semibold text-lg shadow-lg">
               {hasProfile ? '🎯 开始规划' : '📝 填写档案'}
-            </button>
-            <button onClick={() => setPage(6)} className="w-full py-3 bg-amber-100 text-amber-700 rounded-xl font-medium">
-              ⭐ 我的收藏 ({favorites.length})
             </button>
             {hasProfile && (
               <button onClick={() => setPage(2)} className="w-full py-4 bg-white text-gray-700 rounded-2xl font-semibold border-2 border-gray-200">
@@ -577,6 +565,15 @@ const generateLocalPlan = () => {
                 ))}</div>
               </div>
 
+              <div>
+                <h3 className="font-semibold text-gray-900 mb-3">⚙️ 备菜偏好</h3>
+                <button onClick={() => setSimplePrep(!simplePrep)}
+                  className={`w-full p-3 rounded-xl text-center text-sm flex items-center justify-center gap-2 ${simplePrep ? 'bg-green-500 text-white' : 'bg-gray-100 text-gray-700'}`}>
+                  🥄 {simplePrep ? '✓ 制作简单 (减少备菜)' : '制作简单 (减少备菜)'}
+                </button>
+                <p className="text-xs text-gray-500 mt-1">开启后生成的菜品会尽量简单、常备、可批量制作</p>
+              </div>
+
               <div className="flex gap-2">
                 <button onClick={() => setPage(0)} className="flex-1 py-3 bg-gray-100 rounded-xl text-gray-700">← 返回</button>
                 <button onClick={handleGenerate} disabled={style.length === 0} className="flex-1 py-3 bg-gradient-to-r from-blue-500 to-pink-500 text-white rounded-xl font-semibold disabled:opacity-50">🚀 生成</button>
@@ -644,25 +641,9 @@ const generateLocalPlan = () => {
           {!loading && result && currentDayMeals.map((m: any, mealIdx: number) => (
             <div key={mealIdx} className="mb-4 p-4 border rounded-xl">
               <div className="font-semibold text-gray-900 mb-3">{m.type}</div>
-              {m.dishes?.map((dish: any, dishIdx: number) => {
-                const addToFavs = () => {
-                  const newFav = {
-                    id: Date.now().toString(),
-                    recipe: dish.recipe,
-                    category: '常做',
-                    tags: dish.recipe?.tags || [],
-                    createdAt: new Date().toISOString().split('T')[0]
-                  };
-                  const updated = [...favorites, newFav];
-                  setFavorites(updated);
-                  localStorage.setItem('meal_favorites', JSON.stringify(updated));
-                  setToast('已收藏: ' + dish.recipe?.recipe_name);
-                  setTimeout(() => setToast(''), 2000);
-                };
-                return (
-                  <DishCard key={dishIdx} dish={dish} onReplace={() => replaceDish(selectedDay - 1, mealIdx, dishIdx)} onFavorite={addToFavs} />
-                );
-              })}
+              {m.dishes?.map((dish: any, dishIdx: number) => (
+                <DishCard key={dishIdx} dish={dish} onReplace={() => replaceDish(selectedDay - 1, mealIdx, dishIdx)} />
+              ))}
             </div>
           ))}
 
@@ -811,96 +792,8 @@ if (page === 5) {
 }
 
 // ========== 收藏夹页 ==========
-if (page === 6) {
-  const categories = ['常做', '快手', '待尝试'];
-  
-  const addToFavorites = (recipe: any, category: string, tags: string[]) => {
-    const newFav = {
-      id: Date.now().toString(),
-      recipe,
-      category,
-      tags,
-      createdAt: new Date().toISOString().split('T')[0]
-    };
-    const updated = [...favorites, newFav];
-    setFavorites(updated);
-    localStorage.setItem('meal_favorites', JSON.stringify(updated));
-    setToast('已添加到收藏夹');
-    setTimeout(() => setToast(''), 2000);
-  };
-  
-  const removeFavorite = (id: string) => {
-    const updated = favorites.filter(f => f.id !== id);
-    setFavorites(updated);
-    localStorage.setItem('meal_favorites', JSON.stringify(updated));
-    setToast('已移除收藏');
-    setTimeout(() => setToast(''), 2000);
-  };
-  
-  const filteredFavorites = favorites.filter(f => 
-    favoriteCategory === '全部' || f.category === favoriteCategory
-  );
-  
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-orange-50 to-amber-50 py-8">
-      <div className="max-w-xl mx-auto px-4">
-        <div className="bg-white rounded-2xl shadow-lg p-6">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-bold text-gray-900">⭐ 我的收藏</h2>
-            <button onClick={() => setPage(0)} className="text-blue-500 text-sm">← 返回</button>
-          </div>
-          
-          {/* 分类筛选 */}
-          <div className="flex gap-2 mb-4">
-            {['全部', ...categories].map(cat => (
-              <button key={cat} onClick={() => setFavoriteCategory(cat)}
-                className={`px-3 py-1 rounded-full text-sm ${favoriteCategory === cat ? 'bg-amber-500 text-white' : 'bg-gray-100 text-gray-700'}`}>
-                {cat}
-              </button>
-            ))}
-          </div>
-          
-          {filteredFavorites.length === 0 ? (
-            <div className="text-center text-gray-500 py-8">
-              {favoriteCategory === '全部' ? '暂无收藏' : `暂无${favoriteCategory}的收藏`}
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {filteredFavorites.map((fav: any) => (
-                <div key={fav.id} className="p-4 border rounded-xl">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <div className="font-medium text-gray-800">{fav.recipe.recipe_name}</div>
-                      <div className="text-xs text-gray-500 mt-1">
-                        {fav.category} • {fav.createdAt}
-                      </div>
-                      {fav.tags.length > 0 && (
-                        <div className="flex gap-1 mt-2">
-                          {fav.tags.map((tag: string) => (
-                            <span key={tag} className="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs rounded-full">
-                              {tag}
-                            </span>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                    <button onClick={() => removeFavorite(fav.id)} className="text-red-500 text-sm">
-                      移除
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ========== 周菜单视图 ==========
 // 菜品卡片组件 - 可展开做法
-function DishCard({ dish, onReplace, onFavorite }: { dish: any, onReplace: () => void, onFavorite: () => void }) {
+function DishCard({ dish, onReplace }: { dish: any, onReplace: () => void }) {
   const [expanded, setExpanded] = useState(false);
   const dishType = dish.dish_type || '菜品';
   
@@ -923,9 +816,6 @@ function DishCard({ dish, onReplace, onFavorite }: { dish: any, onReplace: () =>
           <div className="text-xs text-gray-500">⏱️ {dish.recipe?.time_cost}分钟</div>
         </div>
         <div className="flex gap-2">
-          <button onClick={onFavorite} className="text-xs text-amber-500" title="收藏">
-            ⭐
-          </button>
           <button onClick={onReplace} className="text-xs text-blue-500">换一道</button>
         </div>
       </div>
