@@ -296,12 +296,42 @@ const generateLocalPlan = () => {
     finally { setLoading(false); }
   };
 
-  const replaceDish = (dayIdx: number, mealIdx: number, dishIdx: number) => {
+  const replaceDish = async (dayIdx: number, mealIdx: number, dishIdx: number) => {
     if (!result?.days) return;
+    // 显示加载状态
     const newDays = [...result.days];
     if (newDays[dayIdx]?.meals[mealIdx]?.dishes[dishIdx]) {
-      newDays[dayIdx].meals[mealIdx].dishes[dishIdx].recipe.recipe_name = '🔄 点击重新生成';
+      newDays[dayIdx].meals[mealIdx].dishes[dishIdx].recipe.recipe_name = '⏳ 生成中...';
       setResult({ ...result, days: newDays });
+    }
+    
+    // 调用 API 生成单道菜
+    try {
+      const dishType = result.days[dayIdx].meals[mealIdx].dishes[dishIdx].dish_type;
+      const response = await fetch('/api/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          profile: { goals, restrictions: [...restrictions, ...customRestrictions], kitchen_tools: kitchen },
+          session: { 
+            style_preferences: style, 
+            meals_per_day: [result.days[dayIdx].meals[mealIdx].type],
+            days: 1,
+            person_count: Number(people) || 2,
+            budget: budget,
+            soft_dislikes: dislikes.map(d => d.item)
+          }
+        })
+      });
+      const data = await response.json();
+      if (data.days?.[0]?.meals?.[0]?.dishes?.[0]) {
+        const newDish = data.days[0].meals[0].dishes[0];
+        const updatedDays = [...result.days];
+        updatedDays[dayIdx].meals[mealIdx].dishes[dishIdx] = newDish;
+        setResult({ ...result, days: updatedDays });
+      }
+    } catch (e) {
+      setError('换菜失败，请重试');
     }
   };
 
