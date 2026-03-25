@@ -1,28 +1,63 @@
 export async function onRequestPost({ request, env }) {
+  // 允许的域名列表
+  const allowedOrigins = [
+    'https://wizmealplanner.pages.dev',
+    'http://localhost:3000',
+    'http://localhost:3001',
+  ];
+  
+  const origin = request.headers.get('Origin') || '';
+  const isOriginAllowed = allowedOrigins.includes(origin) || origin.endsWith('.cloudflareapps.dev');
+  
   const headers = {
     'Content-Type': 'application/json',
-    'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Methods': 'POST, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type',
   };
+  
+  // 只有允许的域名才返回 CORS 头
+  if (isOriginAllowed) {
+    headers['Access-Control-Allow-Origin'] = origin;
+  }
 
   if (request.method === 'OPTIONS') {
     return new Response(null, { headers });
   }
 
+  // 拒绝非法来源
+  if (!isOriginAllowed) {
+    return new Response(JSON.stringify({ error: '不允许的请求来源' }), { status: 403, headers });
+  }
+
   try {
-    const { profile, session } = await request.json();
+    const body = await request.json();
     
-    const restrictions = [...(profile.hard_restrictions || []), ...(profile.custom_restrictions || [])].join('、') || '无';
-    const dislikes = (session.soft_dislikes || []).join('、') || '无';
-    const goals = profile.goals?.join('、') || '健康';
-    const isSimple = profile.goals?.includes('制作简单');
-    const kitchenTools = profile.kitchen_tools?.join('、') || '无';
-    const styles = session.style_preferences?.join('、') || '家常中餐';
-    const meals = session.meals_per_day?.join('、') || '早餐、午餐、晚餐';
-    const personCount = session.person_count || 2;
-    const budget = session.budget || '无限制';
-    const days = session.days;
+    // 验证输入结构
+    const profile = body.profile || {};
+    const session = body.session || {};
+    
+    // 基本验证
+    if (!profile || !session) {
+      return new Response(JSON.stringify({ error: '缺少必要参数' }), { status: 400, headers });
+    }
+    
+    // 清理和验证用户输入
+    const sanitizeInput = (str) => {
+      if (typeof str !== 'string') return '';
+      return str.replace(/[<>\"\';]/g, '').trim().substring(0, 200);
+    };
+    
+    const restrictions = [...(profile.hard_restrictions || []), ...(profile.custom_restrictions || [])]
+      .map(sanitizeInput).filter(Boolean).join('、') || '无';
+    const dislikes = (session.soft_dislikes || []).map(sanitizeInput).filter(Boolean).join('、') || '无';
+    const goals = (profile.goals || []).map(sanitizeInput).filter(Boolean).join('、') || '健康';
+    const isSimple = goals.includes('制作简单');
+    const kitchenTools = (profile.kitchen_tools || []).map(sanitizeInput).filter(Boolean).join('、') || '无';
+    const styles = (session.style_preferences || []).map(sanitizeInput).filter(Boolean).join('、') || '家常中餐';
+    const meals = (session.meals_per_day || []).map(sanitizeInput).filter(Boolean).join('、') || '早餐、午餐、晚餐';
+    const personCount = Math.min(Math.max(parseInt(session.person_count) || 2, 1), 20);
+    const budget = sanitizeInput(session.budget) || '无限制';
+    const days = Math.min(Math.max(parseInt(session.days) || 3, 1), 30);
     
     const simpleNote = isSimple ? '\n【重要】制作简单：选择步骤少（不超过3步）、食材易获取、烹饪难度低的菜谱。' : '';
     
@@ -75,20 +110,23 @@ export async function onRequestPost({ request, env }) {
 6. 每个食材必须包含具体用量，如"鸡蛋2个"、"大米100克"
 7. 相同食材必须合并为一条，标注总用量`;
 
-    const apiKey = env.DEEPSEEK_API_KEY || '';
+    // 获取 API 配置
+    const apiKey = env.CUSTOM_API_KEY || env.DEEPSEEK_API_KEY || '';
+    const apiUrl = env.CUSTOM_API_URL || 'https://api.deepseek.com/v1/chat/completions';
+    const modelName = env.CUSTOM_MODEL || 'deepseek-chat';
     
     if (!apiKey) {
       return new Response(JSON.stringify({ error: 'API密钥未配置' }), { status: 500, headers });
     }
 
-    const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
+    const response = await fetch(apiUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer ' + apiKey,
       },
       body: JSON.stringify({
-        model: 'deepseek-chat',
+        model: modelName,
         messages: [{ role: 'user', content: prompt }],
         temperature: 0.7,
         max_tokens: 4000,
@@ -97,7 +135,7 @@ export async function onRequestPost({ request, env }) {
 
     if (!response.ok) {
       const errorText = await response.text();
-      const errMsg = 'API错误: ' + response.status + ' - ' + errorText;
+      const errMsg = 'API错误: ' + response.status;
       return new Response(JSON.stringify({ error: errMsg }), {
         status: 500,
         headers,
@@ -140,7 +178,6 @@ export async function onRequestPost({ request, env }) {
 export async function onRequestOptions() {
   return new Response(null, {
     headers: {
-      'Access-Control-Allow-Origin': '*',
       'Access-Control-Allow-Methods': 'POST, OPTIONS',
       'Access-Control-Allow-Headers': 'Content-Type',
     },
