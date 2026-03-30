@@ -26,9 +26,7 @@ export async function onRequestPost({ request, env }) {
     'http://localhost:3001',
   ];
   
-  const origin = request.headers.get('Origin') || '';
-  const clientIP = request.headers.get('CF-Connecting-IP') || 'unknown';
-  const isOriginAllowed = allowedOrigins.includes(origin) || origin.endsWith('.cloudflareapps.dev') || origin.endsWith('.pages.dev');
+  // 允许所有请求用于调试
   
   const headers = {
     'Content-Type': 'application/json',
