@@ -155,7 +155,7 @@ export async function onRequestPost({ request, env }) {
     const apiBody = isMiniMax ? {
       model: modelName,
       messages: [
-        { role: 'system', content: '你是一个专业的食谱规划师，只返回JSON。' },
+        { role: 'system', content: '你是一个专业的食谱规划师。用户会给你一个饮食规划请求，你必须严格按照要求的JSON格式返回，不要有任何其他文字、解释或markdown代码块。只返回纯JSON。' },
         { role: 'user', content: prompt }
       ],
       temperature: 0.7,
@@ -249,19 +249,31 @@ export async function onRequestPost({ request, env }) {
         result = JSON.parse(fixed);
       },
       
-      // 策略4: 修复多余逗号 + 补全括号
+      // 策略5: 提取任何看起来像JSON的部分
       () => {
-        let fixed = jsonStr
+        // 尝试找到任何 { ... } 结构
+        const jsonMatches = jsonStr.match(/{[\s\S]*?}/g);
+        if (!jsonMatches || jsonMatches.length === 0) throw new Error('No JSON found');
+        
+        // 取最长的匹配
+        const longestMatch = jsonMatches.reduce((a, b) => a.length > b.length ? a : b);
+        
+        // 尝试修复常见问题
+        let fixed = longestMatch
           .replace(/,\s*,/g, ',')
           .replace(/,\s*]/g, ']')
           .replace(/,\s*}/g, '}')
-          .replace(/,\s*([}\])])/g, '$1');  // 清理末尾逗号
+          .replace(/,\s*([}\])])/g, '$1');
+        
+        // 确保括号匹配
         const openBraces = (fixed.match(/{/g) || []).length;
         const closeBraces = (fixed.match(/}/g) || []).length;
         const openBrackets = (fixed.match(/\[/g) || []).length;
         const closeBrackets = (fixed.match(/\]/g) || []).length;
+        
         if (openBraces > closeBraces) fixed += '}'.repeat(openBraces - closeBraces);
         if (openBrackets > closeBrackets) fixed += ']'.repeat(openBrackets - closeBrackets);
+        
         result = JSON.parse(fixed);
       },
     ];
@@ -274,7 +286,8 @@ export async function onRequestPost({ request, env }) {
       } catch (e) {
         if (i === strategies.length - 1) {
           console.log(`[JSON ERROR] All ${strategies.length} strategies failed: ${e.message}`);
-          console.log(`[JSON RAW] ${jsonStr.substring(0, 200)}...`);
+          console.log(`[JSON RAW] ${jsonStr.substring(0, 500)}...`);
+          console.log(`[JSON FULL LENGTH] ${jsonStr.length} chars`);
           return new Response(JSON.stringify({ error: '数据解析失败，请重试' }), { status: 500, headers });
         }
       }
