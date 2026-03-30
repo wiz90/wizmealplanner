@@ -186,15 +186,25 @@ export async function onRequestPost({ request, env }) {
 
     // MiniMax 请求格式
     const getRequestBody = (daysToGenerate, mealsPerDay) => {
-      const simplePrompt = `规划${daysToGenerate}天${styles}菜单。
+      // 明确要求生成所有天数
+      const simplePrompt = `重要：你必须生成恰好${daysToGenerate}天的完整菜单规划。
+
 目标: ${goals}
 忌口: ${restrictions}
 不爱吃: ${dislikes}
 厨具: ${kitchenTools}
 ${simpleNote}
 
-格式: {"days":[{"day_index":1,"meals":[{"type":"午餐","dishes":[{"dish_type":"主食","recipe":{"recipe_name":"米饭","time_cost":30,"ingredients":["大米100g","水"],"steps":["淘米","加水","煮熟"]}}]}]}]}
-只返回JSON，不要其他文字。`;
+每餐必须包含：主食+主菜+蔬菜（早餐除外）。
+
+格式要求：
+- 必须包含${daysToGenerate}天的完整数据
+- 每一天都要有 day_index: 1, 2, 3... 依次递增
+- 每一天都要有所有餐次(早餐、午餐、晚餐)
+
+JSON格式: {"days":[{"day_index":1,"meals":[{"type":"午餐","dishes":[{"dish_type":"主食","recipe":{"recipe_name":"米饭","time_cost":30,"ingredients":["大米100g","水"],"steps":["淘米","加水","煮熟"]}}]}]}]}
+
+只返回JSON，不要其他文字。确保JSON包含所有${daysToGenerate}天的数据！`;
 
       return isMiniMax ? {
         model: modelName,
