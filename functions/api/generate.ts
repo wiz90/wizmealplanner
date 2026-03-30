@@ -141,7 +141,7 @@ export async function onRequestPost({ request, env }) {
     // 获取 API 配置
     const apiKey = env.CUSTOM_API_KEY || env.DEEPSEEK_API_KEY || '';
     const apiUrl = env.CUSTOM_API_URL || 'https://api.deepseek.com/v1/chat/completions';
-    const modelName = env.CUSTOM_MODEL || 'deepseek-chat';
+    const modelName = env.CUSTOM_MODEL || 'MiniMax-M2.7-highspeed';
     
     if (!apiKey) {
       console.log(`[ERROR] No API key configured`);

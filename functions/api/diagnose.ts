@@ -27,7 +27,7 @@ export async function onRequest({ request, env }) {
 
     // 最简单的测试
     const testBody = {
-      model: modelName || 'MiniMax-M2.7',
+      model: modelName || 'MiniMax-M2.7-highspeed',
       messages: [
         { role: 'system', content: '只返回 {"test": "ok"}' },
         { role: 'user', content: 'test' }
