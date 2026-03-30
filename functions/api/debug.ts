@@ -1,11 +1,21 @@
 // 调试端点，用于检查 API 问题
-export async function onRequestGet({ request, env }) {
+export async function onRequest({ request, env }) {
   const headers = {
     'Content-Type': 'application/json',
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type',
   };
+
+  // 处理 OPTIONS 预检请求
+  if (request.method === 'OPTIONS') {
+    return new Response(null, { headers });
+  }
+
+  // 只处理 GET 请求
+  if (request.method !== 'GET') {
+    return new Response(JSON.stringify({ error: 'Method not allowed' }), { status: 405, headers });
+  }
 
   try {
     // 检查环境变量
