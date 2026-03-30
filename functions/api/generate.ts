@@ -28,7 +28,7 @@ export async function onRequestPost({ request, env }) {
   
   const origin = request.headers.get('Origin') || '';
   const clientIP = request.headers.get('CF-Connecting-IP') || 'unknown';
-  const isOriginAllowed = allowedOrigins.includes(origin) || origin.endsWith('.cloudflareapps.dev');
+  const isOriginAllowed = allowedOrigins.includes(origin) || origin.endsWith('.cloudflareapps.dev') || origin.endsWith('.pages.dev');
   
   const headers = {
     'Content-Type': 'application/json',
