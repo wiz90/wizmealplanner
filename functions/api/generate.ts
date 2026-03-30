@@ -152,59 +152,34 @@ export async function onRequestPost({ request, env }) {
     const isMiniMax = apiUrl.includes('minimax');
     
     // 使用更简单、更明确的提示
-    const simplePrompt = `你是一个食谱规划助手。请为${personCount}人规划${days}天的${styles}风格菜单。
-    
-用户要求:
-- 目标: ${goals}
-- 忌口 (绝对不能吃): ${restrictions}
-- 不爱吃 (尽量避免): ${dislikes}
-- 厨具: ${kitchenTools}
+    const simplePrompt = `为${personCount}人规划${days}天${styles}菜单。
+目标: ${goals}
+忌口: ${restrictions}
+不爱吃: ${dislikes}
+厨具: ${kitchenTools}
 ${simpleNote}
 
-重要: 你必须返回有效的 JSON 格式，不要有任何其他文字、解释或 markdown 代码块。
-
-返回格式必须是这样的 JSON:
+返回JSON格式:
 {
-  "days": [
-    {
-      "day_index": 1,
-      "meals": [
-        {
-          "type": "早餐",
-          "dishes": [
-            {
-              "dish_type": "主食",
-              "recipe": {
-                "recipe_name": "菜名",
-                "tags": ["标签1", "标签2"],
-                "time_cost": 分钟数,
-                "ingredients": ["食材1 用量", "食材2 用量"],
-                "steps": ["步骤1", "步骤2", "步骤3"]
-              }
-            }
-          ]
-        }
-      ]
-    }
-  ]
+  "days": [{"day_index":1,"meals":[{"type":"早餐","dishes":[{"dish_type":"主食","recipe":{"recipe_name":"菜名","time_cost":10,"ingredients":["食材"],"steps":["步骤"]}}]}]}]
 }
 
-请严格按照这个格式返回，不要添加任何额外字段或文字。`;
+只返回JSON，不要其他文字。`;
 
     // MiniMax 请求格式
     const apiBody = isMiniMax ? {
       model: modelName,
       messages: [
-        { role: 'system', content: '你是一个食谱规划助手。用户要求你返回 JSON 格式的菜单计划。你必须只返回纯 JSON，不要有任何其他文字、解释、markdown 代码块或额外说明。如果返回无效 JSON，系统会出错。' },
+        { role: 'system', content: '只返回JSON。' },
         { role: 'user', content: simplePrompt }
       ],
-      temperature: 0.3,  // 降低温度以获得更一致的输出
-      max_tokens: 4000,
+      temperature: 0.1,  // 非常低的温度以获得最一致的输出
+      max_tokens: 2000,
     } : {
       model: modelName,
       messages: [{ role: 'user', content: simplePrompt }],
-      temperature: 0.3,
-      max_tokens: 4000,
+      temperature: 0.1,
+      max_tokens: 2000,
     };
     
     console.log(`[REQUEST] IP: ${clientIP}, Days: ${days}, Model: ${modelName}, API: ${isMiniMax ? 'MiniMax' : 'DeepSeek'}`);
