@@ -19,37 +19,19 @@ function checkRateLimit(ip, limit = 20, windowMs = 60000) {
 }
 
 export async function onRequestPost({ request, env }) {
-  // 允许的域名列表
-  const allowedOrigins = [
-    'https://wizmealplanner.pages.dev',
-    'http://localhost:3000',
-    'http://localhost:3001',
-  ];
-  
-  // 允许所有请求用于调试
-  
   const headers = {
     'Content-Type': 'application/json',
+    'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Methods': 'POST, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type',
   };
-  
-  // 只有允许的域名才返回 CORS 头
-  if (isOriginAllowed) {
-    headers['Access-Control-Allow-Origin'] = origin;
-  }
 
   if (request.method === 'OPTIONS') {
     return new Response(null, { headers });
   }
 
-  // 拒绝非法来源
-  if (!isOriginAllowed) {
-    console.log(`[BLOCKED] Invalid origin: ${origin} from IP: ${clientIP}`);
-    return new Response(JSON.stringify({ error: '不允许的请求来源' }), { status: 403, headers });
-  }
-
   // 速率限制检查
+  const clientIP = request.headers.get('CF-Connecting-IP') || 'unknown';
   if (!checkRateLimit(clientIP)) {
     console.log(`[RATE LIMIT] IP: ${clientIP}`);
     return new Response(JSON.stringify({ error: '请求过于频繁，请稍后再试' }), { status: 429, headers });
