@@ -154,12 +154,12 @@ ${simpleNote}
         { role: 'user', content: simplePrompt }
       ],
       temperature: 0.1,  // 非常低的温度以获得最一致的输出
-      max_tokens: 2000,
+      max_tokens: 4000,  // 增加到 4000
     } : {
       model: modelName,
       messages: [{ role: 'user', content: simplePrompt }],
       temperature: 0.1,
-      max_tokens: 2000,
+      max_tokens: 4000,
     };
     
     console.log(`[REQUEST] IP: ${clientIP}, Days: ${days}, Model: ${modelName}, API: ${isMiniMax ? 'MiniMax' : 'DeepSeek'}`);
