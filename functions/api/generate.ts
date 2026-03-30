@@ -151,19 +151,59 @@ export async function onRequestPost({ request, env }) {
     // 判断是否为 MiniMax API
     const isMiniMax = apiUrl.includes('minimax');
     
+    // 使用更简单、更明确的提示
+    const simplePrompt = `你是一个食谱规划助手。请为${personCount}人规划${days}天的${styles}风格菜单。
+    
+用户要求:
+- 目标: ${goals}
+- 忌口 (绝对不能吃): ${restrictions}
+- 不爱吃 (尽量避免): ${dislikes}
+- 厨具: ${kitchenTools}
+${simpleNote}
+
+重要: 你必须返回有效的 JSON 格式，不要有任何其他文字、解释或 markdown 代码块。
+
+返回格式必须是这样的 JSON:
+{
+  "days": [
+    {
+      "day_index": 1,
+      "meals": [
+        {
+          "type": "早餐",
+          "dishes": [
+            {
+              "dish_type": "主食",
+              "recipe": {
+                "recipe_name": "菜名",
+                "tags": ["标签1", "标签2"],
+                "time_cost": 分钟数,
+                "ingredients": ["食材1 用量", "食材2 用量"],
+                "steps": ["步骤1", "步骤2", "步骤3"]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
+
+请严格按照这个格式返回，不要添加任何额外字段或文字。`;
+
     // MiniMax 请求格式
     const apiBody = isMiniMax ? {
       model: modelName,
       messages: [
-        { role: 'system', content: '你是一个专业的食谱规划师。用户会给你一个饮食规划请求，你必须严格按照要求的JSON格式返回，不要有任何其他文字、解释或markdown代码块。只返回纯JSON。' },
-        { role: 'user', content: prompt }
+        { role: 'system', content: '你是一个食谱规划助手。用户要求你返回 JSON 格式的菜单计划。你必须只返回纯 JSON，不要有任何其他文字、解释、markdown 代码块或额外说明。如果返回无效 JSON，系统会出错。' },
+        { role: 'user', content: simplePrompt }
       ],
-      temperature: 0.7,
+      temperature: 0.3,  // 降低温度以获得更一致的输出
       max_tokens: 4000,
     } : {
       model: modelName,
-      messages: [{ role: 'user', content: prompt }],
-      temperature: 0.7,
+      messages: [{ role: 'user', content: simplePrompt }],
+      temperature: 0.3,
       max_tokens: 4000,
     };
     
