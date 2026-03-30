@@ -18,11 +18,43 @@ function checkRateLimit(ip, limit = 20, windowMs = 60000) {
   return record.count <= limit;
 }
 
-// 检查 JSON 是否完整（以 } 或 ] 结尾）
-function isJsonComplete(str) {
+// 检测 JSON 是否被截断（比 isJsonComplete 更严格）
+function looksTruncated(str) {
   const trimmed = str.trim();
+  if (!trimmed) return true;
+  
   const lastChar = trimmed[trimmed.length - 1];
-  return lastChar === '}' || lastChar === ']';
+  
+  // 如果最后字符不是 } 或 ]，明显截断
+  if (lastChar !== '}' && lastChar !== ']') return true;
+  
+  // 检查是否截断在字符串内部
+  // 找到最后一个 } 或 ] 之后的部分，看引号是否成对
+  const lastBraceOrBracket = Math.max(trimmed.lastIndexOf('}'), trimmed.lastIndexOf(']'));
+  const afterLastClose = trimmed.substring(lastBraceOrBracket + 1);
+  
+  // 如果最后一个闭括号后面还有非空白字符（且不是 } 或 ]），说明截断
+  if (afterLastClose.trim()) return true;
+  
+  // 检查截断在字符串内部的情况（最后字符是 } 或 ]，但可能在字符串内）
+  // 统计最后一个闭括号之前未转义的引号对数
+  const beforeLastClose = trimmed.substring(0, lastBraceOrBracket + 1);
+  const quoteMatches = beforeLastClose.match(/(?:[^\\])"/g);
+  const quoteCount = quoteMatches ? quoteMatches.length : 0;
+  
+  // 如果引号数为奇数，说明最后在字符串内部截断
+  if (quoteCount % 2 === 1) return true;
+  
+  // 检查括号匹配是否表明截断
+  const openBraces = (trimmed.match(/{/g) || []).length;
+  const closeBraces = (trimmed.match(/}/g) || []).length;
+  const openBrackets = (trimmed.match(/\[/g) || []).length;
+  const closeBrackets = (trimmed.match(/\]/g) || []).length;
+  
+  // 如果闭括号比开括号多，肯定截断
+  if (closeBraces > openBraces || closeBrackets > openBrackets) return true;
+  
+  return false;
 }
 
 // 提取有效 JSON 字符串
@@ -217,8 +249,8 @@ ${simpleNote}
     // 检查 JSON 是否完整，如果不完整则重试
     let parseResult = parseJsonWithRetry(jsonStr);
     
-    // 如果解析失败且 JSON 不完整，尝试用更少的 days 重试
-    if (!parseResult.success && !isJsonComplete(jsonStr)) {
+    // 如果解析失败且 JSON 疑似被截断，尝试用更少的 days 重试
+    if (!parseResult.success && looksTruncated(jsonStr)) {
       console.log(`[RETRY] JSON incomplete (ends with: "${jsonStr.slice(-20)}"), retrying with 1 day...`);
       
       response = await fetch(apiUrl, {
