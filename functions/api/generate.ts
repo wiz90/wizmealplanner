@@ -288,7 +288,12 @@ export async function onRequestPost({ request, env }) {
           console.log(`[JSON ERROR] All ${strategies.length} strategies failed: ${e.message}`);
           console.log(`[JSON RAW] ${jsonStr.substring(0, 500)}...`);
           console.log(`[JSON FULL LENGTH] ${jsonStr.length} chars`);
-          return new Response(JSON.stringify({ error: '数据解析失败，请重试' }), { status: 500, headers });
+          
+          // 返回更详细的错误信息
+          const errorDetail = `AI返回的数据格式错误。请检查AI是否返回了有效的JSON。\n\n` +
+                            `错误: ${e.message}\n` +
+                            `前500字符: ${jsonStr.substring(0, 200)}...`;
+          return new Response(JSON.stringify({ error: '数据解析失败，请重试', detail: errorDetail }), { status: 500, headers });
         }
       }
     }
