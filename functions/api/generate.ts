@@ -249,9 +249,9 @@ ${simpleNote}
     // 检查 JSON 是否完整，如果不完整则重试
     let parseResult = parseJsonWithRetry(jsonStr);
     
-    // 如果解析失败且 JSON 疑似被截断，尝试用更少的 days 重试
-    if (!parseResult.success && looksTruncated(jsonStr)) {
-      console.log(`[RETRY] JSON incomplete (ends with: "${jsonStr.slice(-20)}"), retrying with 1 day...`);
+    // 如果解析失败，尝试用更少的 days 重试（JSON不完整一定是截断，无需looksTruncated判断）
+    if (!parseResult.success) {
+      console.log(`[RETRY] JSON parse failed (${parseResult.error}), retrying with 1 day...`);
       
       response = await fetch(apiUrl, {
         method: 'POST',
