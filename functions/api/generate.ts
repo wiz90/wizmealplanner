@@ -208,7 +208,9 @@ ${simpleNote}
     }
 
     const data = await response.json();
-    const content = data.choices?.[0]?.message?.content || '';
+    // MiniMax M2.7 可能把内容放在 reasoning_content 里
+    const content = data.choices?.[0]?.message?.content || 
+                   data.choices?.[0]?.message?.reasoning_content || '';
     
     let jsonStr = content.trim();
     

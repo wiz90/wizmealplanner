@@ -49,19 +49,26 @@ export async function onRequest({ request, env }) {
     const duration = Date.now() - start;
     const rawText = await response.text();
 
+    let parsedData = null;
+    try {
+      parsedData = JSON.parse(rawText);
+    } catch (e) {
+      parsedData = { parseError: e.message };
+    }
+    
     return new Response(JSON.stringify({
       status: response.status,
       duration: duration + 'ms',
       rawResponse: rawText,
       responseLength: rawText.length,
-      isJson: (() => {
-        try {
-          JSON.parse(rawText);
-          return true;
-        } catch {
-          return false;
-        }
-      })(),
+      isJson: parsedData && !parsedData.parseError,
+      parsedData: parsedData,
+      contentFields: parsedData && !parsedData.parseError ? {
+        content: parsedData.choices?.[0]?.message?.content,
+        reasoning_content: parsedData.choices?.[0]?.message?.reasoning_content,
+        hasContent: !!parsedData.choices?.[0]?.message?.content,
+        hasReasoning: !!parsedData.choices?.[0]?.message?.reasoning_content,
+      } : null,
       config: {
         apiUrl,
         modelName,
