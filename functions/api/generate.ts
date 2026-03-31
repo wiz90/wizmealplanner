@@ -209,7 +209,12 @@ export async function onRequestPost({ request, env }) {
 厨具: ${kitchenTools}
 ${simpleNote}
 
-每餐必须包含：主食+主菜+蔬菜（早餐除外）。
+每餐必须严格按以下结构组成：
+- 主食：米饭、面条、粥、面包等（每餐只能有1个）
+- 主菜：肉、鱼、蛋等蛋白质（每餐只能有1个）
+- 蔬菜：各种蔬菜（每餐只能有1个）
+
+重要：主食、主菜、蔬菜各只能有1个，不要重复！
 
 格式要求：
 - 必须包含${daysToGenerate}天的完整数据
