@@ -186,9 +186,10 @@ export async function onRequestPost({ request, env }) {
 
     // MiniMax 请求格式
     const getRequestBody = (daysToGenerate, mealsPerDay) => {
-      // 明确要求生成所有天数
+      // 明确要求生成所有天数，包含风格
       const simplePrompt = `重要：你必须生成恰好${daysToGenerate}天的完整菜单规划。
 
+风格要求：${styles} (如Wagas风格应该是健康轻食、沙拉、无负担的菜品)
 目标: ${goals}
 忌口: ${restrictions}
 不爱吃: ${dislikes}
@@ -204,7 +205,7 @@ ${simpleNote}
 
 JSON格式: {"days":[{"day_index":1,"meals":[{"type":"午餐","dishes":[{"dish_type":"主食","recipe":{"recipe_name":"米饭","time_cost":30,"ingredients":["大米100g","水"],"steps":["淘米","加水","煮熟"]}}]}]}]}
 
-只返回JSON，不要其他文字。确保JSON包含所有${daysToGenerate}天的数据！`;
+只返回JSON，不要其他文字。确保JSON包含所有${daysToGenerate}天的数据！菜品要符合${styles}风格！`;
 
       return isMiniMax ? {
         model: modelName,
@@ -212,12 +213,12 @@ JSON格式: {"days":[{"day_index":1,"meals":[{"type":"午餐","dishes":[{"dish_t
           { role: 'system', content: '只返回JSON。' },
           { role: 'user', content: simplePrompt }
         ],
-        temperature: 0.1,
+        temperature: 0.3,  // 提高以获得更有质量的输出
         max_tokens: 4000,
       } : {
         model: modelName,
         messages: [{ role: 'user', content: simplePrompt }],
-        temperature: 0.1,
+        temperature: 0.3,
         max_tokens: 4000,
       };
     };
