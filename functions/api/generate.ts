@@ -188,7 +188,7 @@ export async function onRequestPost({ request, env }) {
     const getRequestBody = (daysToGenerate, mealsPerDay) => {
       // 为不同风格添加具体菜品示例
       const styleExamples: Record<string, string> = {
-        'Wagas风格': '示例：牛油果吐司、藜麦沙拉、希腊酸奶碗、鲜虾时蔬沙拉、烤鸡胸配蔬菜、无糖酸奶',
+        'Wagas风格': 'Wagas风格必须是健康轻食！示例：牛油果吐司、藜麦沙拉、希腊酸奶碗、鲜虾时蔬沙拉、烤鸡胸配蔬菜、无糖酸奶、羽衣甘蓝沙拉、藜麦碗、香蕉花生酱吐司',
         '家常菜': '示例：西红柿炒蛋、酸辣土豆丝、红烧肉、鱼香肉丝、青椒肉片',
         '川菜': '示例：麻婆豆腐、回锅肉、水煮鱼、酸菜鱼、宫保鸡丁',
         '东北菜': '示例：锅包肉、地三鲜、酸菜粉丝、杀猪菜、小鸡炖蘑菇',
@@ -202,6 +202,7 @@ export async function onRequestPost({ request, env }) {
       const simplePrompt = `重要：你必须生成恰好${daysToGenerate}天的完整菜单规划。
 
 风格：${styles}
+${styles.includes('Wagas') ? 'Wagas风格必须是健康轻食餐！不要中餐做法！要西式健康餐！' : ''}
 风格示例：${styleExample}
 目标: ${goals}
 忌口: ${restrictions}
