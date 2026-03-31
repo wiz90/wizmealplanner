@@ -186,10 +186,23 @@ export async function onRequestPost({ request, env }) {
 
     // MiniMax 请求格式
     const getRequestBody = (daysToGenerate, mealsPerDay) => {
+      // 为不同风格添加具体菜品示例
+      const styleExamples: Record<string, string> = {
+        'Wagas风格': '示例：牛油果吐司、藜麦沙拉、希腊酸奶碗、鲜虾时蔬沙拉、烤鸡胸配蔬菜、无糖酸奶',
+        '家常菜': '示例：西红柿炒蛋、酸辣土豆丝、红烧肉、鱼香肉丝、青椒肉片',
+        '川菜': '示例：麻婆豆腐、回锅肉、水煮鱼、酸菜鱼、宫保鸡丁',
+        '东北菜': '示例：锅包肉、地三鲜、酸菜粉丝、杀猪菜、小鸡炖蘑菇',
+        '清真': '示例：羊肉串、手抓饭、牛肉饼、羊肉泡馍',
+        '泰式': '示例：冬阴功汤、泰式炒河粉、咖喱牛肉、芒果糯米饭',
+        '越南': '示例：越南春卷、火车头河粉、甘蔗虾、越式法棍',
+      };
+      const styleExample = styleExamples[styles] || '符合该风格的菜品';
+      
       // 明确要求生成所有天数，包含风格
       const simplePrompt = `重要：你必须生成恰好${daysToGenerate}天的完整菜单规划。
 
-风格要求：${styles} (如Wagas风格应该是健康轻食、沙拉、无负担的菜品)
+风格：${styles}
+风格示例：${styleExample}
 目标: ${goals}
 忌口: ${restrictions}
 不爱吃: ${dislikes}
@@ -205,7 +218,7 @@ ${simpleNote}
 
 JSON格式: {"days":[{"day_index":1,"meals":[{"type":"午餐","dishes":[{"dish_type":"主食","recipe":{"recipe_name":"米饭","time_cost":30,"ingredients":["大米100g","水"],"steps":["淘米","加水","煮熟"]}}]}]}]}
 
-只返回JSON，不要其他文字。确保JSON包含所有${daysToGenerate}天的数据！菜品要符合${styles}风格！`;
+只返回JSON，不要其他文字。确保JSON包含所有${daysToGenerate}天的数据！菜品必须符合${styles}风格！`;
 
       return isMiniMax ? {
         model: modelName,
